@@ -146,4 +146,66 @@ ORDER_TIMEOUT_SECONDS = 30  # Timeout for order execution
 
 # === LOGGING ===
 LOG_LEVEL = "INFO"
-LOG_FILE = "macro_quadrant_strategy.log" 
+LOG_FILE = "macro_quadrant_strategy.log"
+
+# === QUADRANT ALLOCATIONS (FOR DASHBOARD) ===
+# Portfolio Allocations per Quadrant
+QUAD_ALLOCATIONS = {
+    'Q1': {
+        'QQQ': 0.60 * 0.60,      # 60% of 60% Growth
+        'ARKK': 0.60 * 0.40,     # 40% of 60% Growth
+        'XLC': 0.15 * 0.50,      # 50% of 15% Consumer Disc
+        'XLY': 0.15 * 0.50,      # 50% of 15% Consumer Disc
+        'TLT': 0.10 * 0.50,      # 50% of 10% Bonds
+        'LQD': 0.10 * 0.50,      # 50% of 10% Bonds
+    },
+    'Q2': {
+        'XLE': 0.35 * 0.25,      # 25% of 35% Commodities
+        'DBC': 0.35 * 0.25,      # 25% of 35% Commodities
+        'CPER': 0.35 * 0.25,     # 25% of 35% Commodities
+        'GCC': 0.35 * 0.25,      # 25% of 35% Commodities
+        'XLF': 0.30 * 0.333,     # 33% of 30% Cyclicals
+        'XLI': 0.30 * 0.333,     # 33% of 30% Cyclicals
+        'XLB': 0.30 * 0.334,     # 34% of 30% Cyclicals
+        'XOP': 0.15 * 0.50,      # 50% of 15% Energy
+        'FCG': 0.15 * 0.50,      # 50% of 15% Energy
+        'VNQ': 0.10 * 0.50,      # 50% of 10% Real Assets
+        'PAVE': 0.10 * 0.50,     # 50% of 10% Real Assets
+        'VTV': 0.10 * 0.50,      # 50% of 10% Value
+        'IWD': 0.10 * 0.50,      # 50% of 10% Value
+    },
+    'Q3': {
+        'FCG': 0.25 * 0.333,     # 33% of 25% Energy
+        'XLE': 0.25 * 0.333,     # 33% of 25% Energy
+        'XOP': 0.25 * 0.334,     # 34% of 25% Energy
+        'GLD': 0.30 * 0.20,      # 20% of 30% Commodities
+        'DBC': 0.30 * 0.20,      # 20% of 30% Commodities
+        'CPER': 0.30 * 0.20,     # 20% of 30% Commodities
+        'DBA': 0.30 * 0.20,      # 20% of 30% Commodities
+        'REMX': 0.30 * 0.20,     # 20% of 30% Commodities
+        'TIP': 0.20 * 0.50,      # 50% of 20% TIPS
+        'VTIP': 0.20 * 0.50,     # 50% of 20% TIPS
+        'VNQ': 0.10 * 0.50,      # 50% of 10% Real Assets
+        'PAVE': 0.10 * 0.50,     # 50% of 10% Real Assets
+        'XLV': 0.15 * 0.333,     # 33% of 15% Equities
+        'XLU': 0.15 * 0.333,     # 33% of 15% Equities
+    },
+    'Q4': {
+        'VGLT': 0.50 * 0.50,     # 50% of 50% Long Duration
+        'IEF': 0.50 * 0.50,      # 50% of 50% Long Duration
+        'LQD': 0.20 * 0.50,      # 50% of 20% IG Credit
+        'MUB': 0.20 * 0.50,      # 50% of 20% IG Credit
+        'XLU': 0.15 * 0.333,     # 33% of 15% Defensive
+        'XLP': 0.15 * 0.333,     # 33% of 15% Defensive
+        'XLV': 0.15 * 0.334,     # 34% of 15% Defensive
+        'CASH': 0.15             # 15% cash
+    }
+}
+
+# Quadrant indicator assets (for scoring)
+QUAD_INDICATORS = {
+    'Q1': ['QQQ', 'VUG', 'IWM', 'BTC-USD'],
+    'Q2': ['XLE', 'DBC'],
+    'Q3': ['GLD', 'LIT'],
+    'Q4': ['TLT', 'XLU', 'VIXY']
+} 
