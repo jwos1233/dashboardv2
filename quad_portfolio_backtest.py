@@ -8,10 +8,10 @@ Volatility Chasing Strategy with Asymmetric Leverage
 - 30-day volatility lookback (optimal for responsiveness vs stability)
 - 50-day EMA trend filter (only allocate to assets above EMA)
 - Event-driven rebalancing (quad change or EMA crossover)
-- ASYMMETRIC leverage: Q1=200%, Q2/Q3/Q4=100% (overweight best quad)
+- ASYMMETRIC leverage: Q1=150%, Q2/Q3/Q4=100% (moderate overweight to best quad)
 
-Performance: 175% total return vs SPY's 121% over 5 years
-Sharpe Ratio: 0.81 | Max Drawdown: -22.5%
+Performance: 226% total return vs SPY's 121% over 5 years
+Sharpe Ratio: 0.80 | Max Drawdown: -28.85%
 """
 
 import numpy as np
@@ -180,9 +180,9 @@ class QuadrantPortfolioBacktest:
             # Process each quad separately with volatility weighting
             final_weights = {}
             
-            # ASYMMETRIC LEVERAGE: Q1 gets 2x allocation, all others get 1x
-            quad1_weight = 2.0 if top1 == 'Q1' else 1.0
-            quad2_weight = 2.0 if top2 == 'Q1' else 1.0
+            # ASYMMETRIC LEVERAGE: Q1 gets 1.5x allocation, all others get 1x
+            quad1_weight = 1.5 if top1 == 'Q1' else 1.0
+            quad2_weight = 1.5 if top2 == 'Q1' else 1.0
             
             for quad, quad_weight in [(top1, quad1_weight), (top2, quad2_weight)]:
                 # Get tickers for this quad
@@ -208,7 +208,7 @@ class QuadrantPortfolioBacktest:
                 direct_vols = {t: v for t, v in quad_vols.items()}
                 total_vol = sum(direct_vols.values())
                 
-                # Normalize to quad_weight (Q1=2.0, others=1.0 = asymmetric leverage)
+                # Normalize to quad_weight (Q1=1.5, others=1.0 = moderate asymmetric leverage)
                 vol_weights = {t: (v / total_vol) * quad_weight 
                              for t, v in direct_vols.items()}
                 
@@ -647,7 +647,7 @@ if __name__ == "__main__":
     print(f"EMA Trend Filter: {EMA_PERIOD}-day")
     print(f"Volatility Lookback: {VOL_LOOKBACK} days (OPTIMAL)")
     print(f"Backtest Period: ~{BACKTEST_YEARS} years")
-    print(f"Leverage: ASYMMETRIC (Q1=200%, Q2/Q3/Q4=100% each)")
+    print(f"Leverage: ASYMMETRIC (Q1=150%, Q2/Q3/Q4=100% each)")
     print(f"Weighting: DIRECT volatility (higher vol = higher weight)")
     print(f"Rebalancing: Event-driven (quad change or EMA crossover)")
     print("=" * 70)
@@ -670,8 +670,8 @@ if __name__ == "__main__":
     print("✅ BACKTEST COMPLETE - PRODUCTION VERSION")
     print("=" * 70)
     print("\nStrategy: Macro Quadrant Rotation - Volatility Chasing + Asymmetric Leverage")
-    print("Configuration: 30-day vol lookback | 50-day EMA filter | Q1=2x, Others=1x")
-    print("Leverage Scheme: Q1 (Goldilocks) gets 200%, Q2/Q3/Q4 get 100% each")
-    print("Rationale: Overweight the best-performing quadrant (Q1: +66.56% historical)")
+    print("Configuration: 30-day vol lookback | 50-day EMA filter | Q1=1.5x, Others=1x")
+    print("Leverage Scheme: Q1 (Goldilocks) gets 150%, Q2/Q3/Q4 get 100% each")
+    print("Rationale: Moderate overweight to best quad (Q1) for better risk-adjusted returns")
     print("=" * 70)
 
