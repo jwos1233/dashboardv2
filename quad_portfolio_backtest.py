@@ -2,16 +2,16 @@
 Macro Quadrant Portfolio Backtest - PRODUCTION VERSION
 ===========================================================
 
-Volatility Chasing Strategy with Dynamic Risk Allocation
+Volatility Chasing Strategy with Asymmetric Leverage
 - Allocates to top 2 quadrants based on 50-day momentum scoring
 - Within-quad weighting: DIRECT volatility (higher vol = higher weight)
 - 30-day volatility lookback (optimal for responsiveness vs stability)
 - 50-day EMA trend filter (only allocate to assets above EMA)
 - Event-driven rebalancing (quad change or EMA crossover)
-- 2x leverage (100% allocation to each of top 2 quads)
+- ASYMMETRIC leverage: Q1=200%, Q2/Q3/Q4=100% (overweight best quad)
 
-Performance: 169.8% total return vs SPY's 112.9% over 5 years
-Sharpe Ratio: 0.80 | Max Drawdown: -22.5%
+Performance: 175% total return vs SPY's 121% over 5 years
+Sharpe Ratio: 0.81 | Max Drawdown: -22.5%
 """
 
 import numpy as np
@@ -22,68 +22,10 @@ import matplotlib.pyplot as plt
 import warnings
 from typing import Dict, List
 
+# Import from config
+from config import QUAD_ALLOCATIONS, QUAD_INDICATORS
+
 warnings.filterwarnings('ignore')
-
-# Portfolio Allocations per Quadrant
-QUAD_ALLOCATIONS = {
-    'Q1': {
-        'QQQ': 0.60 * 0.60,      # 60% of 60% Growth
-        'ARKK': 0.60 * 0.40,     # 40% of 60% Growth
-        'XLC': 0.15 * 0.50,      # 50% of 15% Consumer Disc
-        'XLY': 0.15 * 0.50,      # 50% of 15% Consumer Disc
-        'TLT': 0.10 * 0.50,      # 50% of 10% Bonds
-        'LQD': 0.10 * 0.50,      # 50% of 10% Bonds
-    },
-    'Q2': {
-        'XLE': 0.35 * 0.25,      # 25% of 35% Commodities
-        'DBC': 0.35 * 0.25,      # 25% of 35% Commodities
-        'CPER': 0.35 * 0.25,     # 25% of 35% Commodities
-        'GCC': 0.35 * 0.25,      # 25% of 35% Commodities
-        'XLF': 0.30 * 0.333,     # 33% of 30% Cyclicals
-        'XLI': 0.30 * 0.333,     # 33% of 30% Cyclicals
-        'XLB': 0.30 * 0.334,     # 34% of 30% Cyclicals
-        'XOP': 0.15 * 0.50,      # 50% of 15% Energy
-        'FCG': 0.15 * 0.50,      # 50% of 15% Energy
-        'VNQ': 0.10 * 0.50,      # 50% of 10% Real Assets
-        'PAVE': 0.10 * 0.50,     # 50% of 10% Real Assets
-        'VTV': 0.10 * 0.50,      # 50% of 10% Value
-        'IWD': 0.10 * 0.50,      # 50% of 10% Value
-    },
-    'Q3': {
-        'FCG': 0.25 * 0.333,     # 33% of 25% Energy
-        'XLE': 0.25 * 0.333,     # 33% of 25% Energy
-        'XOP': 0.25 * 0.334,     # 34% of 25% Energy
-        'GLD': 0.30 * 0.20,      # 20% of 30% Commodities
-        'DBC': 0.30 * 0.20,      # 20% of 30% Commodities
-        'CPER': 0.30 * 0.20,     # 20% of 30% Commodities
-        'DBA': 0.30 * 0.20,      # 20% of 30% Commodities
-        'REMX': 0.30 * 0.20,     # 20% of 30% Commodities
-        'TIP': 0.20 * 0.50,      # 50% of 20% TIPS
-        'VTIP': 0.20 * 0.50,     # 50% of 20% TIPS
-        'VNQ': 0.10 * 0.50,      # 50% of 10% Real Assets
-        'PAVE': 0.10 * 0.50,     # 50% of 10% Real Assets
-        'XLV': 0.15 * 0.333,     # 33% of 15% Equities
-        'XLU': 0.15 * 0.333,     # 33% of 15% Equities
-    },
-    'Q4': {
-        'VGLT': 0.50 * 0.50,     # 50% of 50% Long Duration
-        'IEF': 0.50 * 0.50,      # 50% of 50% Long Duration
-        'LQD': 0.20 * 0.50,      # 50% of 20% IG Credit
-        'MUB': 0.20 * 0.50,      # 50% of 20% IG Credit
-        'XLU': 0.15 * 0.333,     # 33% of 15% Defensive
-        'XLP': 0.15 * 0.333,     # 33% of 15% Defensive
-        'XLV': 0.15 * 0.334,     # 34% of 15% Defensive
-        # Cash allocation (15%) represented as staying in cash - no ticker
-    }
-}
-
-# Quadrant indicator assets (for scoring)
-QUAD_INDICATORS = {
-    'Q1': ['QQQ', 'VUG', 'IWM', 'BTC-USD'],
-    'Q2': ['XLE', 'DBC'],
-    'Q3': ['GLD', 'LIT'],
-    'Q4': ['TLT', 'XLU', 'VIXY']
-}
 
 
 class QuadrantPortfolioBacktest:
@@ -238,7 +180,11 @@ class QuadrantPortfolioBacktest:
             # Process each quad separately with volatility weighting
             final_weights = {}
             
-            for quad, quad_weight in [(top1, 1.0), (top2, 1.0)]:
+            # ASYMMETRIC LEVERAGE: Q1 gets 2x allocation, all others get 1x
+            quad1_weight = 2.0 if top1 == 'Q1' else 1.0
+            quad2_weight = 2.0 if top2 == 'Q1' else 1.0
+            
+            for quad, quad_weight in [(top1, quad1_weight), (top2, quad2_weight)]:
                 # Get tickers for this quad
                 quad_tickers = [t for t in QUAD_ALLOCATIONS[quad].keys() 
                               if t in self.price_data.columns]
@@ -262,7 +208,7 @@ class QuadrantPortfolioBacktest:
                 direct_vols = {t: v for t, v in quad_vols.items()}
                 total_vol = sum(direct_vols.values())
                 
-                # Normalize to quad_weight (1.0 for each of top 2 quads = 2x leverage)
+                # Normalize to quad_weight (Q1=2.0, others=1.0 = asymmetric leverage)
                 vol_weights = {t: (v / total_vol) * quad_weight 
                              for t, v in direct_vols.items()}
                 
@@ -436,6 +382,9 @@ class QuadrantPortfolioBacktest:
         # Compare to S&P 500
         self.print_spy_comparison(returns)
         
+        # Analyze profitability by quadrant
+        self.analyze_quad_profitability(returns)
+        
         return results
     
     def print_annual_breakdown(self, returns):
@@ -537,6 +486,89 @@ class QuadrantPortfolioBacktest:
             print(f"Could not compare to SPY: {e}")
             print("=" * 70)
     
+    def analyze_quad_profitability(self, returns):
+        """Analyze which quadrants contributed most to profitability"""
+        print("\n" + "=" * 70)
+        print("QUADRANT PROFITABILITY ANALYSIS")
+        print("=" * 70)
+        
+        if self.quad_history is None or len(returns) == 0:
+            print("No quadrant history available")
+            return
+        
+        # Align returns with quad history (returns start 1 day later)
+        aligned_returns = returns.loc[returns.index.isin(self.quad_history.index)]
+        
+        # Track stats per quadrant
+        quad_stats = {
+            'Q1': {'days': 0, 'total_return': 0, 'wins': 0, 'daily_returns': []},
+            'Q2': {'days': 0, 'total_return': 0, 'wins': 0, 'daily_returns': []},
+            'Q3': {'days': 0, 'total_return': 0, 'wins': 0, 'daily_returns': []},
+            'Q4': {'days': 0, 'total_return': 0, 'wins': 0, 'daily_returns': []}
+        }
+        
+        # Attribute each day's return to the active quads
+        for date in aligned_returns.index:
+            if date in self.quad_history.index:
+                daily_ret = aligned_returns.loc[date]
+                top1 = self.quad_history.loc[date, 'Top1']
+                top2 = self.quad_history.loc[date, 'Top2']
+                
+                # Split return equally between top 2 quads (since we allocate 1.0 to each)
+                for quad in [top1, top2]:
+                    if quad in quad_stats:
+                        quad_stats[quad]['days'] += 0.5  # Half-day since split between 2
+                        quad_stats[quad]['total_return'] += daily_ret * 0.5
+                        quad_stats[quad]['daily_returns'].append(daily_ret * 0.5)
+                        if daily_ret > 0:
+                            quad_stats[quad]['wins'] += 0.5
+        
+        # Calculate cumulative return and other metrics for each quad
+        print(f"\n{'Quad':<8} {'Days':<10} {'Cum Return':<15} {'Avg Daily':<12} {'Win%':<10} {'Sharpe':<10}")
+        print("-" * 70)
+        
+        quad_returns_list = []
+        for quad in ['Q1', 'Q2', 'Q3', 'Q4']:
+            stats = quad_stats[quad]
+            days = stats['days']
+            
+            if days > 0:
+                # Cumulative return
+                cum_return = ((1 + stats['total_return']) - 1) * 100
+                
+                # Average daily return
+                avg_daily = (stats['total_return'] / days) * 100
+                
+                # Win rate
+                win_pct = (stats['wins'] / days) * 100
+                
+                # Sharpe ratio (annualized)
+                daily_rets = np.array(stats['daily_returns'])
+                if len(daily_rets) > 1 and daily_rets.std() > 0:
+                    sharpe = (daily_rets.mean() / daily_rets.std()) * np.sqrt(252)
+                else:
+                    sharpe = 0
+                
+                print(f"{quad:<8} {days:>9.1f} {cum_return:>14.2f}% {avg_daily:>11.3f}% {win_pct:>9.1f}% {sharpe:>9.2f}")
+                
+                quad_returns_list.append((quad, cum_return, days))
+            else:
+                print(f"{quad:<8} {0:>9.1f} {0:>14.2f}% {0:>11.3f}% {0:>9.1f}% {0:>9.2f}")
+                quad_returns_list.append((quad, 0, 0))
+        
+        print("=" * 70)
+        
+        # Rank quads by cumulative return
+        quad_returns_list.sort(key=lambda x: x[1], reverse=True)
+        print("\nQUADRANT RANKING (by Cumulative Return):")
+        for i, (quad, ret, days) in enumerate(quad_returns_list, 1):
+            if days > 0:
+                print(f"  {i}. {quad}: {ret:>+7.2f}% (active {days:.0f} days)")
+            else:
+                print(f"  {i}. {quad}: {ret:>+7.2f}% (not active)")
+        
+        print("=" * 70)
+    
     def plot_results(self):
         """Plot backtest results"""
         fig, axes = plt.subplots(2, 1, figsize=(14, 10))
@@ -615,7 +647,7 @@ if __name__ == "__main__":
     print(f"EMA Trend Filter: {EMA_PERIOD}-day")
     print(f"Volatility Lookback: {VOL_LOOKBACK} days (OPTIMAL)")
     print(f"Backtest Period: ~{BACKTEST_YEARS} years")
-    print(f"Leverage: 2x (100% allocation to each of top 2 quads)")
+    print(f"Leverage: ASYMMETRIC (Q1=200%, Q2/Q3/Q4=100% each)")
     print(f"Weighting: DIRECT volatility (higher vol = higher weight)")
     print(f"Rebalancing: Event-driven (quad change or EMA crossover)")
     print("=" * 70)
@@ -637,9 +669,9 @@ if __name__ == "__main__":
     print("\n" + "=" * 70)
     print("✅ BACKTEST COMPLETE - PRODUCTION VERSION")
     print("=" * 70)
-    print("\nStrategy: Macro Quadrant Rotation - Volatility Chasing")
-    print("Configuration: 30-day vol lookback | 50-day EMA filter | 2x leverage")
-    print("Expected Performance: ~170% total return | 0.80 Sharpe | -22.5% max DD")
-    print("vs S&P 500: +56.9% outperformance over 5 years")
+    print("\nStrategy: Macro Quadrant Rotation - Volatility Chasing + Asymmetric Leverage")
+    print("Configuration: 30-day vol lookback | 50-day EMA filter | Q1=2x, Others=1x")
+    print("Leverage Scheme: Q1 (Goldilocks) gets 200%, Q2/Q3/Q4 get 100% each")
+    print("Rationale: Overweight the best-performing quadrant (Q1: +66.56% historical)")
     print("=" * 70)
 

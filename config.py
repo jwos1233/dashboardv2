@@ -149,7 +149,7 @@ LOG_LEVEL = "INFO"
 LOG_FILE = "macro_quadrant_strategy.log"
 
 # === QUADRANT ALLOCATIONS (FOR DASHBOARD) ===
-# Portfolio Allocations per Quadrant
+# Portfolio Allocations per Quadrant - ORIGINAL PROVEN UNIVERSE
 QUAD_ALLOCATIONS = {
     'Q1': {
         'QQQ': 0.60 * 0.60,      # 60% of 60% Growth
@@ -198,7 +198,7 @@ QUAD_ALLOCATIONS = {
         'XLU': 0.15 * 0.333,     # 33% of 15% Defensive
         'XLP': 0.15 * 0.333,     # 33% of 15% Defensive
         'XLV': 0.15 * 0.334,     # 34% of 15% Defensive
-        'CASH': 0.15             # 15% cash
+        # Cash allocation (15%) represented as staying in cash - no ticker
     }
 }
 
