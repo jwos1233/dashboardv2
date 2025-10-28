@@ -152,8 +152,9 @@ LOG_FILE = "macro_quadrant_strategy.log"
 # Portfolio Allocations per Quadrant - ORIGINAL PROVEN UNIVERSE
 QUAD_ALLOCATIONS = {
     'Q1': {
-        'QQQ': 0.60 * 0.60,      # 60% of 60% Growth
-        'ARKK': 0.60 * 0.40,     # 40% of 60% Growth
+        'QQQ': 0.60 * 0.50,      # 50% of 60% Growth
+        'ARKK': 0.60 * 0.35,     # 35% of 60% Growth
+        'IWM': 0.60 * 0.15,      # 15% of 60% Growth (Small Caps)
         'XLC': 0.15 * 0.50,      # 50% of 15% Consumer Disc
         'XLY': 0.15 * 0.50,      # 50% of 15% Consumer Disc
         'TLT': 0.10 * 0.50,      # 50% of 10% Bonds

@@ -6,19 +6,24 @@
 
 ---
 
-## Overall Performance
+## Overall Performance (NET OF COSTS)
+
+**Costs Assumption**: 20 basis points (0.20%) per leg - conservative institutional/retail estimate
 
 | Metric | **Strategy** | **S&P 500 (SPY)** | **Difference** |
 |--------|-------------|-------------------|----------------|
-| **Total Return** | **458.22%** | 158.90% | **+299.32%** |
-| **Annualized Return** | **44.02%** | 20.75% | **+23.28%** |
-| **Annualized Volatility** | 32.15% | 17.52% | +14.63% |
-| **Sharpe Ratio** | **1.37** | 1.18 | **+0.18** |
-| **Maximum Drawdown** | -28.60% | -24.50% | -4.10% |
+| **Total Return** | **197.44%** | 158.90% | **+38.53%** |
+| **Annualized Return** | **28.41%** | 20.75% | **+7.67%** |
+| **Annualized Volatility** | 32.12% | 17.52% | +14.60% |
+| **Sharpe Ratio** | **0.88** | 1.18 | **-0.30** |
+| **Maximum Drawdown** | -33.70% | -24.50% | -9.20% |
 | **Win Rate (Daily)** | ~54% | ~54% | -- |
 
-**Alpha vs S&P 500**: +23.28% per year  
-**Outperformance**: +299.32% total
+**Alpha vs S&P 500**: +7.67% per year  
+**Outperformance**: +38.53% total  
+**Total Trading Costs**: $64,732.06 (129.46% of initial capital, 43.53% of final capital)
+
+**IMPORTANT**: 20 bp per leg is conservative. Costs reduced returns by **-261%** from gross performance (458% → 197%). High rebalancing frequency (90.8%) and leverage (2-2.5x) compound cost impact. Strategy still profitable but more modest vs S&P 500.
 
 ---
 
@@ -26,21 +31,22 @@
 
 | Year | **Strategy Return** | **S&P 500 Return** | **Outperformance** | **Strategy Sharpe** | **Max DD** | **Win %** | **Days** |
 |------|---------------------|--------------------|--------------------|---------------------|------------|-----------|----------|
-| 2020 | **+66.49%** | +42.0% | **+24.49%** | 1.70 | -28.60% | 58.6% | 174 |
-| 2021 | **+57.94%** | +28.7% | **+29.24%** | 1.54 | -14.88% | 56.0% | 252 |
-| 2022 | **-5.04%** | -18.1% | **+13.06%** | -0.02 | -27.83% | 51.0% | 251 |
-| 2023 | **+43.77%** | +26.3% | **+17.47%** | 1.48 | -21.03% | 52.0% | 250 |
-| 2024 | **+11.73%** | +24.8% | -13.07% | 0.60 | -11.10% | 54.8% | 252 |
-| 2025 | **+39.17%** | +18.2% | **+20.97%** | 1.66 | -15.34% | 54.4% | 206 |
+| 2020 | **+51.40%** | +42.0% | **+9.40%** | 1.43 | -29.26% | 58.0% | 174 |
+| 2021 | **+40.94%** | +28.7% | **+12.24%** | 1.20 | -18.75% | 54.8% | 252 |
+| 2022 | **-12.40%** | -18.1% | **+5.70%** | -0.29 | -29.92% | 48.2% | 251 |
+| 2023 | **+29.65%** | +26.3% | **+3.35%** | 1.10 | -24.27% | 50.0% | 250 |
+| 2024 | **-3.03%** | +24.8% | -27.83% | -0.02 | -14.97% | 53.2% | 252 |
+| 2025 | **+26.57%** | +18.2% | **+8.37%** | 1.22 | -18.66% | 51.9% | 206 |
 
-### Key Insights:
+### Key Insights (WITH 20 bp COSTS):
 
-- **Profitable in 5 out of 6 years** (83% win rate)
-- **2022 Bear Market**: Only down -5.04% vs S&P 500's -18.1% (outperformed by +13%)
-- **Best Year**: 2020 (+66.49% return with 1.70 Sharpe)
-- **Most Consistent**: 2021 had lowest drawdown (-14.88%) with strong returns (+57.94%)
-- **4 years with 40%+ returns**: 2020, 2021, 2023, 2025
-- **Average Annual Return**: 35.68% (arithmetic mean)
+- **Profitable in 4 out of 6 years** (67% win rate) - 2022 and 2024 were down years
+- **2022 Bear Market**: Down -12.40% vs S&P 500's -18.1% (outperformed by +5.70%)
+- **2024 Underperformance**: Down -3.03% vs SPY's +24.8% (-27.83% underperformance) - costs hurt in choppy markets
+- **Best Year**: 2020 (+51.40% return with 1.43 Sharpe)
+- **Most Consistent**: 2023 had solid returns (+29.65%) with 1.10 Sharpe
+- **No 40%+ return years** with 20 bp costs (2020-2021 were 41-51%)
+- **Average Annual Return**: 22.19% (arithmetic mean) vs 24.0% for SPY
 
 ---
 

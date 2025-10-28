@@ -40,13 +40,14 @@ class QuadrantPortfolioBacktest:
         self.vol_lookback = vol_lookback
         
         self.price_data = None
+        self.open_data = None
         self.ema_data = None
         self.volatility_data = None
         self.portfolio_value = None
         self.quad_history = None
     
     def fetch_data(self):
-        """Download price data for all tickers"""
+        """Download price data for all tickers (Close for signals, Open for execution)"""
         all_tickers = []
         for quad_assets in QUAD_ALLOCATIONS.values():
             all_tickers.extend(quad_assets.keys())
@@ -61,25 +62,36 @@ class QuadrantPortfolioBacktest:
         print(f"Period: {fetch_start.date()} to {self.end_date}")
         
         price_data = {}
+        open_data = {}
         for ticker in all_tickers:
             try:
                 data = yf.download(ticker, start=fetch_start, end=self.end_date, 
                                  progress=False, auto_adjust=True)
                 
+                # Extract Close prices (for signals, momentum, EMA)
                 if isinstance(data.columns, pd.MultiIndex):
                     if 'Close' in data.columns.get_level_values(0):
                         prices = data['Close']
+                    if 'Open' in data.columns.get_level_values(0):
+                        opens = data['Open']
                 else:
                     if 'Close' in data.columns:
                         prices = data['Close']
                     else:
                         continue
+                    if 'Open' in data.columns:
+                        opens = data['Open']
+                    else:
+                        continue
                 
                 if isinstance(prices, pd.DataFrame):
                     prices = prices.iloc[:, 0]
+                if isinstance(opens, pd.DataFrame):
+                    opens = opens.iloc[:, 0]
                 
-                if len(prices) > 100:
+                if len(prices) > 100 and len(opens) > 100:
                     price_data[ticker] = prices
+                    open_data[ticker] = opens
                     print(f"✓ {ticker}: {len(prices)} days")
                     
             except Exception as e:
@@ -89,7 +101,12 @@ class QuadrantPortfolioBacktest:
         self.price_data = pd.DataFrame(price_data)
         self.price_data = self.price_data.ffill().bfill()
         
+        self.open_data = pd.DataFrame(open_data)
+        self.open_data = self.open_data.ffill().bfill()
+        
         print(f"\nLoaded {len(self.price_data.columns)} tickers, {len(self.price_data)} days")
+        print(f"  Close prices: for signals/momentum/EMA")
+        print(f"  Open prices: for realistic execution (next-day open)")
         
         # Calculate 50-day EMA
         print(f"Calculating {self.ema_period}-day EMA for trend filter...")
@@ -165,7 +182,7 @@ class QuadrantPortfolioBacktest:
                 if not quad_vols:
                     continue
                 
-                # Calculate DIRECT volatility weights (higher vol = higher weight)
+                # Calculate DIRECT volatility weights (higher vol = higher weight / volatility chasing)
                 direct_vols = {t: v for t, v in quad_vols.items()}
                 total_vol = sum(direct_vols.values())
                 
@@ -218,13 +235,16 @@ class QuadrantPortfolioBacktest:
         target_weights = self.calculate_target_weights(top_quads)
         
         # Simulate portfolio with EVENT-DRIVEN rebalancing + TRUE 1-DAY ENTRY LAG
-        print("Simulating portfolio with TRUE 1-day entry confirmation...")
+        print("Simulating portfolio with TRUE 1-day entry confirmation + REALISTIC EXECUTION...")
         print("  Macro signals: T-1 lag (trade yesterday's regime)")
         print("  Entry confirmation: Check TODAY's EMA (live/current)")
+        print("  Execution timing: NEXT DAY OPEN (realistic fill)")
         print("  Exit rule: Immediate (no lag)")
+        print("  P&L: Overnight at OLD positions, Intraday at NEW positions")
         
         portfolio_value = pd.Series(self.initial_capital, index=target_weights.index)
         actual_positions = pd.Series(0.0, index=target_weights.columns)  # Current holdings
+        prev_positions = pd.Series(0.0, index=target_weights.columns)  # Track previous positions for cost calculation
         pending_entries = {}  # {ticker: target_weight} - waiting for confirmation
         
         prev_top_quads = None
@@ -232,6 +252,14 @@ class QuadrantPortfolioBacktest:
         rebalance_count = 0
         entries_confirmed = 0
         entries_rejected = 0
+        trades_skipped = 0  # Track trades skipped due to minimum threshold
+        total_costs = 0.0  # Track cumulative trading costs
+        
+        # Trading cost per leg (10 basis points = 0.10%)
+        COST_PER_LEG_BPS = 10  # 10 basis points = 0.0010
+        
+        # Minimum trade size threshold (only trade if delta > this %)
+        MIN_TRADE_THRESHOLD = 0.05  # 5% minimum trade size
         
         for i in range(1, len(target_weights)):
             date = target_weights.index[i]
@@ -306,6 +334,21 @@ class QuadrantPortfolioBacktest:
                 if should_rebalance or len(confirmed_entries) > 0:
                     rebalance_count += 1
                     
+                    # Identify which quads stayed vs changed (to avoid unnecessary rebalancing)
+                    quads_that_stayed = set()
+                    if prev_top_quads is not None and current_top_quads != prev_top_quads:
+                        prev_set = set(prev_top_quads)
+                        current_set = set(current_top_quads)
+                        quads_that_stayed = prev_set & current_set  # Intersection
+                    
+                    # Build reverse mapping: ticker -> quads it belongs to
+                    ticker_to_quads = {}
+                    for quad, allocations in QUAD_ALLOCATIONS.items():
+                        for ticker in allocations.keys():
+                            if ticker not in ticker_to_quads:
+                                ticker_to_quads[ticker] = []
+                            ticker_to_quads[ticker].append(quad)
+                    
                     # First, apply confirmed entries
                     for ticker, weight in confirmed_entries.items():
                         actual_positions[ticker] = weight
@@ -314,6 +357,15 @@ class QuadrantPortfolioBacktest:
                     for ticker in target_weights.columns:
                         target_weight = current_targets[ticker]
                         current_position = actual_positions[ticker]
+                        position_delta = abs(target_weight - current_position)
+                        
+                        # Check if this ticker belongs to a quad that stayed in top 2
+                        ticker_in_stable_quad = False
+                        if ticker in ticker_to_quads and len(quads_that_stayed) > 0:
+                            for quad in ticker_to_quads[ticker]:
+                                if quad in quads_that_stayed:
+                                    ticker_in_stable_quad = True
+                                    break
                         
                         if target_weight == 0 and current_position > 0:
                             # Exit immediately (no lag)
@@ -323,31 +375,89 @@ class QuadrantPortfolioBacktest:
                             if ticker not in confirmed_entries:  # Don't re-add if just confirmed
                                 pending_entries[ticker] = target_weight
                         elif target_weight > 0 and current_position > 0:
-                            # Already holding - adjust position immediately
-                            actual_positions[ticker] = target_weight
+                            # Already holding - check if in stable quad
+                            if ticker_in_stable_quad:
+                                # Ticker is in a quad that stayed in top 2 - DON'T rebalance
+                                trades_skipped += 1
+                            elif position_delta > MIN_TRADE_THRESHOLD:
+                                # Not in stable quad + delta exceeds threshold - rebalance
+                                actual_positions[ticker] = target_weight
+                            else:
+                                # Small delta - skip
+                                trades_skipped += 1
                 
                 # Update tracking variables (use yesterday's for consistency in change detection)
                 prev_top_quads = current_top_quads
                 prev_ema_status = yesterday_ema_status
             
-            # Calculate daily P&L based on actual positions held
+            # Calculate daily P&L with REALISTIC EXECUTION TIMING
+            # =====================================================
+            # Overnight (prev close to today open): OLD positions
+            # Intraday (today open to today close): NEW positions (if rebalanced)
+            # 
+            # This accounts for:
+            # 1. Gap risk: We hold old positions through the overnight gap
+            # 2. Execution lag: New positions start from today's OPEN, not close
+            # =====================================================
+            
             daily_return = 0
+            
             for ticker in actual_positions.index:
-                if ticker in self.price_data.columns:
-                    position = actual_positions[ticker]
-                    if position > 0 and not pd.isna(self.price_data.loc[date, ticker]):
-                        price_return = (self.price_data.loc[date, ticker] / 
-                                      self.price_data.loc[prev_date, ticker] - 1)
-                        daily_return += position * price_return
+                if ticker not in self.price_data.columns:
+                    continue
+                if ticker not in self.open_data.columns:
+                    continue
+                    
+                old_position = prev_positions[ticker]
+                new_position = actual_positions[ticker]
+                
+                # Get prices
+                prev_close = self.price_data.loc[prev_date, ticker]
+                today_open = self.open_data.loc[date, ticker]
+                today_close = self.price_data.loc[date, ticker]
+                
+                if pd.isna(prev_close) or pd.isna(today_open) or pd.isna(today_close):
+                    continue
+                
+                # OVERNIGHT RETURN (prev close to today open): Exposed at OLD position
+                overnight_return = (today_open / prev_close - 1)
+                daily_return += old_position * overnight_return
+                
+                # INTRADAY RETURN (today open to today close): Exposed at NEW position
+                intraday_return = (today_close / today_open - 1)
+                daily_return += new_position * intraday_return
             
             portfolio_value.iloc[i] = portfolio_value.iloc[i-1] * (1 + daily_return)
+            
+            # Calculate trading costs (1 bp per leg)
+            # Cost applied on notional value of position changes
+            if should_rebalance or len(confirmed_entries) > 0:
+                daily_costs = 0.0
+                for ticker in actual_positions.index:
+                    position_change = abs(actual_positions[ticker] - prev_positions[ticker])
+                    if position_change > 0.0001:  # Ignore tiny changes
+                        # Notional traded = position change * portfolio value
+                        notional_traded = position_change * portfolio_value.iloc[i]
+                        # Cost = notional * cost per leg (1 bp = 0.0001)
+                        cost = notional_traded * (COST_PER_LEG_BPS / 10000)
+                        daily_costs += cost
+                
+                # Subtract costs from portfolio value
+                portfolio_value.iloc[i] -= daily_costs
+                total_costs += daily_costs
+            
+            # Update previous positions for next iteration
+            prev_positions = actual_positions.copy()
         
         self.portfolio_value = portfolio_value
+        self.total_trading_costs = total_costs
         
         print(f"  Total rebalances: {rebalance_count} (out of {len(target_weights)-1} days)")
         print(f"  Entries confirmed: {entries_confirmed}")
         print(f"  Entries rejected: {entries_rejected}")
         print(f"  Rejection rate: {entries_rejected / (entries_confirmed + entries_rejected) * 100:.1f}%")
+        print(f"  Trades skipped (< 5% delta): {trades_skipped}")
+        print(f"  Trading costs: ${total_costs:,.2f} ({total_costs / self.initial_capital * 100:.2f}% of initial capital)")
         
         # Generate results
         results = self.generate_results()
@@ -540,6 +650,9 @@ if __name__ == "__main__":
     print(f"Start Date........................................  {backtest.portfolio_value.index[0].strftime('%Y-%m-%d'):>15}")
     print(f"End Date..........................................  {backtest.portfolio_value.index[-1].strftime('%Y-%m-%d'):>15}")
     print(f"Trading Days......................................  {len(backtest.portfolio_value):>15,}")
+    print(f"Total Trading Costs...............................  ${backtest.total_trading_costs:>12,.2f}")
+    print(f"Costs as % of Initial Capital....................  {backtest.total_trading_costs / INITIAL_CAPITAL * 100:>14.2f}%")
+    print(f"Costs as % of Final Capital.......................  {backtest.total_trading_costs / results['final_value'] * 100:>14.2f}%")
     print("=" * 70)
     
     # Annual breakdown
