@@ -1,25 +1,17 @@
 """
-Macro Quadrant Portfolio Backtest - PRODUCTION VERSION
+Macro Quadrant Portfolio Backtest - ENTRY CONFIRMATION VERSION
 ===========================================================
 
-Advanced algorithmic portfolio allocation based on macroeconomic regime detection.
-
-Key Features:
-- Allocates to top 2 quadrants based on 50-day momentum scoring (T-1 lag)
+Volatility Chasing Strategy with Asymmetric Leverage + 1-DAY ENTRY LAG
+- Allocates to top 2 quadrants based on 50-day momentum scoring
 - Within-quad weighting: DIRECT volatility (higher vol = higher weight)
 - 30-day volatility lookback (optimal for responsiveness vs stability)
 - 50-day EMA trend filter (only allocate to assets above EMA)
 - Event-driven rebalancing (quad change or EMA crossover)
 - ASYMMETRIC leverage: Q1=150%, Q2/Q3/Q4=100% (moderate overweight to best quad)
-- ENTRY CONFIRMATION: 1-day lag using CURRENT/TODAY's EMA (not lagged)
+- **NEW: 1-day entry confirmation - only enter if asset STILL above EMA next day**
 
-Performance: 458.22% total return vs SPY's 158.90% over 4 years
-Sharpe Ratio: 1.37 | Max Drawdown: -28.60%
-
-Lag Structure (Prevents Forward-Looking Bias):
-- Macro signals (quad rankings): T-1 lag (trade yesterday's regime)
-- Entry confirmation (EMA filter): T+0 (check TODAY's live EMA)
-- Exit rule: Immediate (no lag)
+Testing if entry lag improves performance by filtering out false breakouts.
 """
 
 import numpy as np
@@ -87,7 +79,7 @@ class QuadrantPortfolioBacktest:
                 continue
         
         self.price_data = pd.DataFrame(price_data)
-        self.price_data = self.price_data.ffill().bfill()
+        self.price_data = self.price_data.fillna(method='ffill').fillna(method='bfill')
         
         print(f"\nLoaded {len(self.price_data.columns)} tickers, {len(self.price_data)} days")
         
@@ -193,9 +185,9 @@ class QuadrantPortfolioBacktest:
         return weights
     
     def run_backtest(self):
-        """Run the complete backtest with TRUE 1-day entry confirmation"""
+        """Run the complete backtest with 1-day entry confirmation"""
         print("=" * 70)
-        print("QUADRANT PORTFOLIO BACKTEST - PRODUCTION VERSION")
+        print("QUADRANT PORTFOLIO BACKTEST - ENTRY CONFIRMATION VERSION")
         print("=" * 70)
         
         # Fetch data
@@ -217,10 +209,9 @@ class QuadrantPortfolioBacktest:
         print("Calculating target portfolio weights...")
         target_weights = self.calculate_target_weights(top_quads)
         
-        # Simulate portfolio with EVENT-DRIVEN rebalancing + TRUE 1-DAY ENTRY LAG
-        print("Simulating portfolio with TRUE 1-day entry confirmation...")
-        print("  Macro signals: T-1 lag (trade yesterday's regime)")
-        print("  Entry confirmation: Check TODAY's EMA (live/current)")
+        # Simulate portfolio with EVENT-DRIVEN rebalancing + ENTRY LAG
+        print("Simulating portfolio with entry confirmation (1-day lag)...")
+        print("  Entry rule: Wait 1 day and confirm asset STILL above EMA")
         print("  Exit rule: Immediate (no lag)")
         
         portfolio_value = pd.Series(self.initial_capital, index=target_weights.index)
@@ -237,52 +228,34 @@ class QuadrantPortfolioBacktest:
             date = target_weights.index[i]
             prev_date = target_weights.index[i-1]
             
-            # ===== CRITICAL: LAG STRUCTURE TO PREVENT FORWARD-LOOKING BIAS =====
-            # MACRO SIGNALS (Quad Rankings): T-1 lag
-            #   - On Day T, we trade based on Day T-1's quad rankings
-            #   - This prevents forward-looking bias in regime detection
-            # 
-            # ENTRY CONFIRMATION (EMA Filter): T+0 (current/live)
-            #   - We check TODAY's EMA to confirm entry (not yesterday's)
-            #   - This is the key difference: responsive to current market
-            # ===================================================================
-            
+            # Get yesterday's target allocation (T-1 lag)
             if i >= 1:
-                target_date = target_weights.index[i-1]  # YESTERDAY (T-1 for quad signals)
+                target_date = target_weights.index[i-1]
                 current_top_quads = (top_quads.loc[target_date, 'Top1'], 
                                    top_quads.loc[target_date, 'Top2'])
                 
-                # Check EMA status for YESTERDAY (for change detection)
-                yesterday_ema_status = {}
+                # Check EMA status for all tickers
+                current_ema_status = {}
                 for ticker in target_weights.columns:
                     if ticker in self.ema_data.columns and target_date in self.price_data.index:
                         price = self.price_data.loc[target_date, ticker]
                         ema = self.ema_data.loc[target_date, ticker]
                         if pd.notna(price) and pd.notna(ema):
-                            yesterday_ema_status[ticker] = price > ema
+                            current_ema_status[ticker] = price > ema
                 
-                # Check EMA status for TODAY (for entry confirmation) - THIS IS THE KEY DIFFERENCE!
-                today_ema_status = {}
-                for ticker in target_weights.columns:
-                    if ticker in self.ema_data.columns and date in self.price_data.index:
-                        price = self.price_data.loc[date, ticker]
-                        ema = self.ema_data.loc[date, ticker]
-                        if pd.notna(price) and pd.notna(ema):
-                            today_ema_status[ticker] = price > ema
-                
-                # Get current target weights (based on yesterday's signals)
+                # Get current target weights
                 current_targets = target_weights.loc[target_date]
                 
-                # Process pending entries - confirm if still above EMA TODAY
+                # Process pending entries - confirm if still above EMA
                 confirmed_entries = {}
                 for ticker, weight in list(pending_entries.items()):
-                    # Check if STILL above EMA using TODAY's data
-                    if ticker in today_ema_status and today_ema_status[ticker]:
+                    # Check if still above EMA today
+                    if ticker in current_ema_status and current_ema_status[ticker]:
                         # Confirmed! Enter the position
                         confirmed_entries[ticker] = weight
                         entries_confirmed += 1
                     else:
-                        # Rejected - dropped below EMA
+                        # Rejected - dropped below EMA or not above anymore
                         entries_rejected += 1
                     # Remove from pending regardless
                     del pending_entries[ticker]
@@ -295,10 +268,10 @@ class QuadrantPortfolioBacktest:
                 elif current_top_quads != prev_top_quads:
                     should_rebalance = True
                 else:
-                    # Check for EMA crossovers (using yesterday's data for consistency)
-                    for ticker in yesterday_ema_status:
+                    # Check for EMA crossovers
+                    for ticker in current_ema_status:
                         if ticker in prev_ema_status:
-                            if yesterday_ema_status[ticker] != prev_ema_status[ticker]:
+                            if current_ema_status[ticker] != prev_ema_status[ticker]:
                                 should_rebalance = True
                                 break
                 
@@ -319,16 +292,16 @@ class QuadrantPortfolioBacktest:
                             # Exit immediately (no lag)
                             actual_positions[ticker] = 0
                         elif target_weight > 0 and current_position == 0:
-                            # New entry - add to pending (wait for confirmation using TOMORROW's EMA)
+                            # New entry - add to pending (wait for confirmation)
                             if ticker not in confirmed_entries:  # Don't re-add if just confirmed
                                 pending_entries[ticker] = target_weight
                         elif target_weight > 0 and current_position > 0:
                             # Already holding - adjust position immediately
                             actual_positions[ticker] = target_weight
                 
-                # Update tracking variables (use yesterday's for consistency in change detection)
+                # Update tracking variables
                 prev_top_quads = current_top_quads
-                prev_ema_status = yesterday_ema_status
+                prev_ema_status = current_ema_status
             
             # Calculate daily P&L based on actual positions held
             daily_return = 0
@@ -380,99 +353,14 @@ class QuadrantPortfolioBacktest:
             'final_value': self.portfolio_value.iloc[-1]
         }
     
-    def print_annual_breakdown(self):
-        """Print annual performance breakdown"""
-        returns = self.portfolio_value.pct_change()
-        
-        print("\n" + "=" * 70)
-        print("ANNUAL PERFORMANCE BREAKDOWN")
-        print("=" * 70)
-        print(f"{'Year':<8}{'Return':<12}{'Sharpe':<12}{'MaxDD':<12}{'Win%':<12}{'Days':<8}")
-        print("-" * 70)
-        
-        for year in returns.index.year.unique():
-            year_returns = returns[returns.index.year == year]
-            
-            if len(year_returns) < 10:
-                continue
-            
-            year_return = (1 + year_returns).prod() - 1
-            year_sharpe = year_returns.mean() / year_returns.std() * np.sqrt(252) if year_returns.std() > 0 else 0
-            
-            year_values = self.portfolio_value[self.portfolio_value.index.year == year]
-            year_cummax = year_values.expanding().max()
-            year_dd = ((year_values - year_cummax) / year_cummax).min()
-            
-            win_rate = (year_returns > 0).sum() / len(year_returns)
-            
-            print(f"{year:<8}{year_return*100:>10.2f}%  {year_sharpe:>10.2f}  "
-                  f"{year_dd*100:>10.2f}%  {win_rate*100:>10.1f}%  {len(year_returns):>6}")
-        
-        print("=" * 70)
-    
-    def print_spy_comparison(self):
-        """Compare strategy to SPY buy-and-hold"""
-        # Download SPY data with a buffer
-        spy_start = self.portfolio_value.index[0] - timedelta(days=5)
-        spy_end = self.portfolio_value.index[-1] + timedelta(days=1)
-        
-        try:
-            spy_data = yf.download('SPY', start=spy_start, end=spy_end, progress=False)
-            
-            if isinstance(spy_data.columns, pd.MultiIndex):
-                spy_prices = spy_data['Close'].iloc[:, 0] if isinstance(spy_data['Close'], pd.DataFrame) else spy_data['Close']
-            else:
-                spy_prices = spy_data['Close']
-            
-            # Align SPY with portfolio dates
-            spy_prices = spy_prices.reindex(self.portfolio_value.index, method='ffill').fillna(method='bfill')
-            
-            # Calculate SPY returns
-            spy_returns = spy_prices.pct_change().dropna()
-            spy_total_return = (spy_prices.iloc[-1] / spy_prices.iloc[0] - 1) * 100
-            spy_annual_return = ((1 + spy_returns.mean()) ** 252 - 1) * 100
-            spy_vol = spy_returns.std() * np.sqrt(252) * 100
-            spy_sharpe = spy_annual_return / spy_vol if spy_vol > 0 else 0
-            
-            spy_cummax = spy_prices.expanding().max()
-            spy_dd = ((spy_prices - spy_cummax) / spy_cummax * 100).min()
-            
-            # Strategy metrics
-            strat_returns = self.portfolio_value.pct_change().dropna()
-            strat_total = (self.portfolio_value.iloc[-1] / self.portfolio_value.iloc[0] - 1) * 100
-            strat_annual = ((1 + strat_returns.mean()) ** 252 - 1) * 100
-            strat_vol = strat_returns.std() * np.sqrt(252) * 100
-            strat_sharpe = strat_annual / strat_vol if strat_vol > 0 else 0
-            
-            strat_cummax = self.portfolio_value.expanding().max()
-            strat_dd = ((self.portfolio_value - strat_cummax) / strat_cummax * 100).min()
-            
-            print("\n" + "=" * 70)
-            print("COMPARISON VS S&P 500 (SPY Buy-and-Hold)")
-            print("=" * 70)
-            print(f"{'Metric':<30}{'Strategy':>15}{'SPY':>15}{'Diff':>15}")
-            print("-" * 70)
-            print(f"{'Total Return':<30}{strat_total:>14.2f}%{spy_total_return:>14.2f}%{strat_total-spy_total_return:>14.2f}%")
-            print(f"{'Annualized Return':<30}{strat_annual:>14.2f}%{spy_annual_return:>14.2f}%{strat_annual-spy_annual_return:>14.2f}%")
-            print(f"{'Volatility':<30}{strat_vol:>14.2f}%{spy_vol:>14.2f}%{strat_vol-spy_vol:>14.2f}%")
-            print(f"{'Sharpe Ratio':<30}{strat_sharpe:>15.2f}{spy_sharpe:>15.2f}{strat_sharpe-spy_sharpe:>15.2f}")
-            print(f"{'Max Drawdown':<30}{strat_dd:>14.2f}%{spy_dd:>14.2f}%{strat_dd-spy_dd:>14.2f}%")
-            print()
-            print(f"{'Alpha (vs SPY)':<30}{strat_annual-spy_annual_return:>14.2f}%")
-            print(f"{'Outperformance':<30}{strat_total-spy_total_return:>14.2f}%")
-            print("=" * 70)
-            
-        except Exception as e:
-            print(f"\nCould not compare to SPY: {e}")
-    
     def plot_results(self):
         """Plot portfolio performance"""
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
         
         # Portfolio value
         ax1.plot(self.portfolio_value.index, self.portfolio_value.values, 
-                linewidth=2, color='purple', label='Portfolio Value')
-        ax1.set_title('Macro Quadrant Rotation Strategy - Production Version', 
+                linewidth=2, color='navy', label='Portfolio Value')
+        ax1.set_title('Portfolio Performance - Entry Confirmation (1-Day Lag)', 
                      fontsize=14, fontweight='bold')
         ax1.set_ylabel('Portfolio Value ($)', fontsize=12)
         ax1.grid(True, alpha=0.3)
@@ -509,15 +397,15 @@ if __name__ == "__main__":
     start_date = end_date - timedelta(days=365 * BACKTEST_YEARS + 200)
     
     print("\n" + "=" * 70)
-    print("MACRO QUADRANT ROTATION STRATEGY - PRODUCTION VERSION")
+    print("ENTRY CONFIRMATION TEST: 1-Day Lag on New Entries")
     print("=" * 70)
     print(f"Initial Capital: ${INITIAL_CAPITAL:,}")
     print(f"Momentum Lookback: {LOOKBACK_DAYS} days")
     print(f"EMA Trend Filter: {EMA_PERIOD}-day")
     print(f"Volatility Lookback: {VOL_LOOKBACK} days")
     print(f"Backtest Period: ~{BACKTEST_YEARS} years")
-    print(f"Leverage: ASYMMETRIC (Q1=150%, Q2/Q3/Q4=100%)")
-    print(f"Entry Confirmation: 1-day lag using live EMA")
+    print(f"Leverage: ASYMMETRIC (Q1=150%, Q2/Q3/Q4=100% each)")
+    print(f"Entry Rule: Wait 1 day and confirm asset STILL above EMA")
     print("=" * 70)
     print()
     
@@ -537,27 +425,14 @@ if __name__ == "__main__":
     print(f"Annualized Volatility.............................  {results['annual_vol']:>12.2f}%")
     print(f"Sharpe Ratio......................................  {results['sharpe']:>12.2f}")
     print(f"Maximum Drawdown..................................  {results['max_drawdown']:>12.2f}%")
-    print(f"Start Date........................................  {backtest.portfolio_value.index[0].strftime('%Y-%m-%d'):>15}")
-    print(f"End Date..........................................  {backtest.portfolio_value.index[-1].strftime('%Y-%m-%d'):>15}")
-    print(f"Trading Days......................................  {len(backtest.portfolio_value):>15,}")
     print("=" * 70)
-    
-    # Annual breakdown
-    backtest.print_annual_breakdown()
-    
-    # SPY comparison
-    backtest.print_spy_comparison()
     
     backtest.plot_results()
     
     print("\n" + "=" * 70)
-    print("BACKTEST COMPLETE - PRODUCTION VERSION")
+    print("✅ ENTRY CONFIRMATION TEST COMPLETE")
     print("=" * 70)
-    print("\nStrategy: Macro Quadrant Rotation with Entry Confirmation")
-    print("Key Features:")
-    print("  - Quad signals: T-1 lag (prevent forward-looking bias)")
-    print("  - Entry confirmation: T+0 (live EMA filter)")
-    print("  - Volatility chasing: 30-day lookback")
-    print("  - Asymmetric leverage: Q1=1.5x, Others=1x")
+    print("\nStrategy: 1-day entry lag filters false breakouts")
+    print("Hypothesis: Reduces whipsaws and improves risk-adjusted returns")
     print("=" * 70)
 

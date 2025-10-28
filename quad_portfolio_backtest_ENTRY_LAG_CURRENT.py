@@ -1,25 +1,18 @@
 """
-Macro Quadrant Portfolio Backtest - PRODUCTION VERSION
+Macro Quadrant Portfolio Backtest - TRUE 1-DAY ENTRY CONFIRMATION
 ===========================================================
 
-Advanced algorithmic portfolio allocation based on macroeconomic regime detection.
-
-Key Features:
+Volatility Chasing Strategy with Asymmetric Leverage + TRUE 1-DAY LAG
 - Allocates to top 2 quadrants based on 50-day momentum scoring (T-1 lag)
 - Within-quad weighting: DIRECT volatility (higher vol = higher weight)
 - 30-day volatility lookback (optimal for responsiveness vs stability)
 - 50-day EMA trend filter (only allocate to assets above EMA)
 - Event-driven rebalancing (quad change or EMA crossover)
 - ASYMMETRIC leverage: Q1=150%, Q2/Q3/Q4=100% (moderate overweight to best quad)
-- ENTRY CONFIRMATION: 1-day lag using CURRENT/TODAY's EMA (not lagged)
+- **TRUE 1-DAY LAG: Check CURRENT/TODAY's EMA for confirmation (not lagged)**
 
-Performance: 458.22% total return vs SPY's 158.90% over 4 years
-Sharpe Ratio: 1.37 | Max Drawdown: -28.60%
-
-Lag Structure (Prevents Forward-Looking Bias):
-- Macro signals (quad rankings): T-1 lag (trade yesterday's regime)
-- Entry confirmation (EMA filter): T+0 (check TODAY's live EMA)
-- Exit rule: Immediate (no lag)
+This checks live/current EMA status for entry confirmation, giving true 1-day lag
+on top of the T-1 macro signal lag.
 """
 
 import numpy as np
@@ -195,7 +188,7 @@ class QuadrantPortfolioBacktest:
     def run_backtest(self):
         """Run the complete backtest with TRUE 1-day entry confirmation"""
         print("=" * 70)
-        print("QUADRANT PORTFOLIO BACKTEST - PRODUCTION VERSION")
+        print("QUADRANT PORTFOLIO BACKTEST - TRUE 1-DAY ENTRY CONFIRMATION")
         print("=" * 70)
         
         # Fetch data
@@ -472,7 +465,7 @@ class QuadrantPortfolioBacktest:
         # Portfolio value
         ax1.plot(self.portfolio_value.index, self.portfolio_value.values, 
                 linewidth=2, color='purple', label='Portfolio Value')
-        ax1.set_title('Macro Quadrant Rotation Strategy - Production Version', 
+        ax1.set_title('Portfolio Performance - TRUE 1-Day Entry Confirmation', 
                      fontsize=14, fontweight='bold')
         ax1.set_ylabel('Portfolio Value ($)', fontsize=12)
         ax1.grid(True, alpha=0.3)
@@ -509,15 +502,15 @@ if __name__ == "__main__":
     start_date = end_date - timedelta(days=365 * BACKTEST_YEARS + 200)
     
     print("\n" + "=" * 70)
-    print("MACRO QUADRANT ROTATION STRATEGY - PRODUCTION VERSION")
+    print("TRUE 1-DAY ENTRY CONFIRMATION TEST")
     print("=" * 70)
     print(f"Initial Capital: ${INITIAL_CAPITAL:,}")
     print(f"Momentum Lookback: {LOOKBACK_DAYS} days")
     print(f"EMA Trend Filter: {EMA_PERIOD}-day")
     print(f"Volatility Lookback: {VOL_LOOKBACK} days")
     print(f"Backtest Period: ~{BACKTEST_YEARS} years")
-    print(f"Leverage: ASYMMETRIC (Q1=150%, Q2/Q3/Q4=100%)")
-    print(f"Entry Confirmation: 1-day lag using live EMA")
+    print(f"Leverage: ASYMMETRIC (Q1=150%, Q2/Q3/Q4=100% each)")
+    print(f"Entry Rule: Check CURRENT/TODAY's EMA (live data)")
     print("=" * 70)
     print()
     
@@ -551,13 +544,10 @@ if __name__ == "__main__":
     backtest.plot_results()
     
     print("\n" + "=" * 70)
-    print("BACKTEST COMPLETE - PRODUCTION VERSION")
+    print("✅ TRUE 1-DAY ENTRY CONFIRMATION TEST COMPLETE")
     print("=" * 70)
-    print("\nStrategy: Macro Quadrant Rotation with Entry Confirmation")
-    print("Key Features:")
-    print("  - Quad signals: T-1 lag (prevent forward-looking bias)")
-    print("  - Entry confirmation: T+0 (live EMA filter)")
-    print("  - Volatility chasing: 30-day lookback")
-    print("  - Asymmetric leverage: Q1=1.5x, Others=1x")
+    print("\nStrategy: Check CURRENT EMA for entry confirmation (not lagged)")
+    print("Key Feature: Quad signals use T-1 lag (prevent forward-looking)")
+    print("             Entry confirmation uses T+0 (current/live EMA)")
     print("=" * 70)
 
