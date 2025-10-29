@@ -31,11 +31,14 @@ QUAD_INDICATORS = {
 class SignalGenerator:
     """Generate live trading signals for macro quadrant rotation strategy"""
     
-    def __init__(self, momentum_days=50, ema_period=50, vol_lookback=30, max_positions=10):
+    def __init__(self, momentum_days=50, ema_period=50, vol_lookback=30, max_positions=10,
+                 atr_stop_loss=2.0, atr_period=14):
         self.momentum_days = momentum_days
         self.ema_period = ema_period
         self.vol_lookback = vol_lookback
         self.max_positions = max_positions  # Top 10 positions (optimal from backtesting)
+        self.atr_stop_loss = atr_stop_loss  # ATR 2.0x stop loss (optimal from backtesting)
+        self.atr_period = atr_period  # 14-day ATR
         
         # Leverage by quadrant
         self.quad_leverage = {

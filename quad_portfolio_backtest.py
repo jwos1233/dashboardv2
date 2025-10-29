@@ -42,7 +42,8 @@ from config import QUAD_ALLOCATIONS, QUADRANT_DESCRIPTIONS
 
 class QuadrantPortfolioBacktest:
     def __init__(self, start_date, end_date, initial_capital=50000, 
-                 momentum_days=50, ema_period=50, vol_lookback=30, max_positions=None):
+                 momentum_days=50, ema_period=50, vol_lookback=30, max_positions=None,
+                 atr_stop_loss=None, atr_period=14):
         self.start_date = start_date
         self.end_date = end_date
         self.initial_capital = initial_capital
@@ -50,9 +51,12 @@ class QuadrantPortfolioBacktest:
         self.ema_period = ema_period
         self.vol_lookback = vol_lookback
         self.max_positions = max_positions  # If set, only trade top N positions
+        self.atr_stop_loss = atr_stop_loss  # ATR multiplier for stop loss (None = no stops)
+        self.atr_period = atr_period  # ATR lookback period (default 14)
         
         self.price_data = None
         self.open_data = None
+        self.atr_data = None
         self.ema_data = None
         self.volatility_data = None
         self.portfolio_value = None
@@ -128,6 +132,13 @@ class QuadrantPortfolioBacktest:
         print(f"Calculating {self.vol_lookback}-day rolling volatility for volatility chasing...")
         returns = self.price_data.pct_change()
         self.volatility_data = returns.rolling(window=self.vol_lookback).std() * np.sqrt(252)
+        
+        # Calculate ATR if stop loss is enabled
+        if self.atr_stop_loss is not None:
+            print(f"Calculating {self.atr_period}-day ATR for stop loss (multiplier: {self.atr_stop_loss}x)...")
+            # Simplified ATR using daily returns volatility
+            daily_returns = self.price_data.pct_change().abs()
+            self.atr_data = daily_returns.rolling(window=self.atr_period).mean() * self.price_data
     
     def calculate_quad_scores(self):
         """Calculate momentum scores for each quadrant"""
@@ -274,6 +285,7 @@ class QuadrantPortfolioBacktest:
         actual_positions = pd.Series(0.0, index=target_weights.columns)  # Current holdings
         prev_positions = pd.Series(0.0, index=target_weights.columns)  # Track previous positions for cost calculation
         pending_entries = {}  # {ticker: target_weight} - waiting for confirmation
+        entry_prices = {}  # {ticker: entry_price} - for stop loss calculation
         
         prev_top_quads = None
         prev_ema_status = {}
@@ -281,6 +293,7 @@ class QuadrantPortfolioBacktest:
         entries_confirmed = 0
         entries_rejected = 0
         trades_skipped = 0  # Track trades skipped due to minimum threshold
+        stops_hit = 0  # Track stop losses
         total_costs = 0.0  # Track cumulative trading costs
         
         
@@ -344,6 +357,25 @@ class QuadrantPortfolioBacktest:
                     # Remove from pending regardless
                     del pending_entries[ticker]
                 
+                # Check ATR stop losses (if enabled)
+                stop_loss_exits = []
+                if self.atr_stop_loss is not None and date in self.price_data.index:
+                    for ticker in actual_positions[actual_positions > 0].index:
+                        if ticker in entry_prices and ticker in self.atr_data.columns:
+                            current_price = self.price_data.loc[date, ticker]
+                            entry_price = entry_prices[ticker]
+                            atr = self.atr_data.loc[date, ticker]
+                            
+                            if pd.notna(current_price) and pd.notna(atr) and pd.notna(entry_price):
+                                stop_price = entry_price - (atr * self.atr_stop_loss)
+                                
+                                # Check if stop hit
+                                if current_price <= stop_price:
+                                    stop_loss_exits.append(ticker)
+                                    actual_positions[ticker] = 0.0
+                                    del entry_prices[ticker]
+                                    stops_hit += 1
+                
                 # Determine if we need to rebalance
                 should_rebalance = False
                 
@@ -351,6 +383,8 @@ class QuadrantPortfolioBacktest:
                     should_rebalance = True
                 elif current_top_quads != prev_top_quads:
                     should_rebalance = True
+                elif len(stop_loss_exits) > 0:
+                    should_rebalance = True  # Force rebalance if stops hit
                 else:
                     # Check for EMA crossovers (using yesterday's data for consistency)
                     for ticker in yesterday_ema_status:
@@ -381,6 +415,9 @@ class QuadrantPortfolioBacktest:
                     # First, apply confirmed entries
                     for ticker, weight in confirmed_entries.items():
                         actual_positions[ticker] = weight
+                        # Record entry price for stop loss tracking
+                        if self.atr_stop_loss is not None and date in self.price_data.index:
+                            entry_prices[ticker] = self.price_data.loc[date, ticker]
                     
                     # Now handle the rest of the rebalancing
                     for ticker in target_weights.columns:
@@ -399,6 +436,9 @@ class QuadrantPortfolioBacktest:
                         if target_weight == 0 and current_position > 0:
                             # Exit immediately (no lag)
                             actual_positions[ticker] = 0
+                            # Clear entry price tracking
+                            if ticker in entry_prices:
+                                del entry_prices[ticker]
                         elif target_weight > 0 and current_position == 0:
                             # New entry - add to pending (wait for confirmation using TOMORROW's EMA)
                             if ticker not in confirmed_entries:  # Don't re-add if just confirmed
@@ -486,6 +526,8 @@ class QuadrantPortfolioBacktest:
         print(f"  Entries rejected: {entries_rejected}")
         print(f"  Rejection rate: {entries_rejected / (entries_confirmed + entries_rejected) * 100:.1f}%")
         print(f"  Trades skipped (< 5% delta): {trades_skipped}")
+        if self.atr_stop_loss is not None:
+            print(f"  Stop losses hit: {stops_hit}")
         print(f"  Trading costs: ${total_costs:,.2f} ({total_costs / self.initial_capital * 100:.2f}% of initial capital)")
         
         # Generate results

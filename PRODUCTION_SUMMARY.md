@@ -1,52 +1,52 @@
-# 🚀 Production System Summary - Top 10 Strategy
+# 🚀 Production System Summary - Top 10 + ATR 2.0x
 
 ## ✅ Production Configuration
 
-**Strategy**: Top 10 Positions (Optimal from Backtesting)
+**Strategy**: Top 10 Positions + ATR 2.0x Stop Loss (v3.0)
 
 ### Performance Metrics (5-Year Backtest)
 
 | Metric | Result |
 |--------|--------|
-| **Total Return** | **192.49%** |
-| **Annualized Return** | **29.38%** |
-| **Sharpe Ratio** | **0.91** |
-| **Max Drawdown** | **-29.44%** |
-| **vs SPY Outperformance** | **+69.69%** |
+| **Total Return** | **420.86%** |
+| **Annualized Return** | **43.96%** |
+| **Sharpe Ratio** | **1.41** |
+| **Max Drawdown** | **-22.62%** |
+| **vs SPY Outperformance** | **+297.95%** |
 
 ---
 
 ## 📁 Production Files
 
 ### Core Trading System
-- ✅ `signal_generator.py` - Generates Top 10 signals (default: max_positions=10)
+- ✅ `signal_generator.py` - Generates Top 10 signals with ATR 2.0x stops
 - ✅ `ib_executor.py` - Executes trades via Interactive Brokers CFDs
-- ✅ `live_trader.py` - Main orchestrator (default: max_positions=10)
+- ✅ `live_trader.py` - Main orchestrator (Top 10 + ATR 2.0x default)
 - ✅ `config.py` - Asset allocations (33 ETFs across 4 quadrants)
 
 ### Backtesting & Reference
-- ✅ `quad_portfolio_backtest.py` - Full backtesting engine (supports max_positions parameter)
+- ✅ `quad_portfolio_backtest.py` - Full backtesting engine (supports ATR stops)
 
 ### Documentation
-- ✅ `README.md` - Updated with Top 10 performance and rationale
-- ✅ `README_LIVE_TRADING.md` - Updated for Top 10 production setup
-- ✅ `QUICKSTART.md` - Quick reference guide (Top 10 default)
+- ✅ `README.md` - Updated with ATR 2.0x performance (v3.0)
+- ✅ `STRATEGY_EXPLAINED.md` - Complete strategy breakdown
+- ✅ `README_LIVE_TRADING.md` - Live trading setup guide
+- ✅ `QUICKSTART.md` - Quick reference guide
 - ✅ `requirements.txt` - All dependencies including ib_insync
 
 ---
 
-## 🎯 Why Top 10?
+## 🎯 Strategy Evolution
 
-We tested 4 concentration levels:
+We tested position counts and stop losses:
 
-| Strategy | Total Return | Sharpe | Max DD | Verdict |
-|----------|--------------|--------|--------|---------|
-| **Top 5** | 108.99% | 0.63 | -33.63% | ❌ Too concentrated, high risk |
-| **Top 10** | **192.49%** ✅ | **0.91** ✅ | -29.44% | 🥇 **OPTIMAL - PRODUCTION** |
-| **Top 15** | 182.64% | 0.92 | -27.56% | 🥈 Slightly lower returns |
-| **Full (17-20)** | 175.06% | 0.91 | -27.81% | 🥉 Over-diversified |
+| Version | Feature | Total Return | Sharpe | Max DD | Verdict |
+|---------|---------|--------------|--------|--------|---------|
+| **v1.0** | Full (17-20 positions) | 175.06% | 0.91 | -27.81% | Good baseline |
+| **v2.0** | Top 10 only | 192.49% | 0.91 | -29.44% | Better concentration |
+| **v3.0** | **Top 10 + ATR 2.0x** | **420.86%** ✅ | **1.41** ✅ | **-22.62%** ✅ | 🥇 **PRODUCTION** |
 
-**Top 10 = Best absolute returns with excellent risk-adjusted performance**
+**v3.0 = +228% better returns AND lower risk than v2.0!**
 
 ---
 

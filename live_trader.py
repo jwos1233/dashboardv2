@@ -24,7 +24,8 @@ class LiveTrader:
             ib_port: IB port (7497 for paper, 7496 for live with TWS)
             dry_run: If True, generate signals but don't execute trades
         """
-        self.signal_gen = SignalGenerator(momentum_days=50, ema_period=50, vol_lookback=30, max_positions=10)
+        self.signal_gen = SignalGenerator(momentum_days=50, ema_period=50, vol_lookback=30, 
+                                          max_positions=10, atr_stop_loss=2.0, atr_period=14)
         self.ib_port = ib_port
         self.dry_run = dry_run
         
