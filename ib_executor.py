@@ -71,30 +71,26 @@ class IBExecutor:
         - DIA -> INDU CFD (Dow Jones)
         """
         # ETF to CFD mapping
+        # Most ETFs have CFDs with the same ticker symbol
+        # Only map the ones that need different symbols
         etf_to_cfd = {
-            'SPY': 'US500',      # S&P 500
-            'QQQ': 'USTEC',      # NASDAQ-100
-            'IWM': 'US2000',     # Russell 2000
-            'DIA': 'INDU',       # Dow Jones
-            'EFA': 'EUSTX50',    # European stocks
-            'EEM': 'CHINA50',    # Emerging markets
-            # Add more mappings as needed
-            # For most ETFs without direct CFD, you may need to:
-            # 1. Use the ETF directly (if IB offers)
-            # 2. Use index futures
-            # 3. Use basket of stocks
+            'SPY': 'US500',      # S&P 500 → US500 CFD
+            'DIA': 'INDU',       # Dow Jones → INDU CFD
+            'EFA': 'EUSTX50',    # European stocks → EUSTX50 CFD
+            'EEM': 'CHINA50',    # Emerging markets → CHINA50 CFD
+            # QQQ, IWM, and most other ETFs use their own ticker as CFD symbol
         }
         
         cfd_symbol = etf_to_cfd.get(ticker, ticker)
         
-        # Create CFD contract
-        contract = CFD(cfd_symbol, currency='USD')
+        # Create CFD contract with SMART exchange to resolve ambiguity
+        contract = CFD(cfd_symbol, exchange='SMART', currency='USD')
         
         # Qualify contract with IB
         try:
             qualified = self.ib.qualifyContracts(contract)
             if qualified:
-                print(f"  ✓ Qualified {ticker} -> {cfd_symbol} CFD")
+                print(f"  ✓ Qualified {ticker} -> {cfd_symbol} CFD (SMART)")
                 return qualified[0]
             else:
                 print(f"  ✗ Could not qualify {ticker} CFD")
@@ -198,12 +194,15 @@ class IBExecutor:
         
         return trade
     
-    def execute_rebalance(self, target_weights: Dict[str, float]):
+    def execute_rebalance(self, target_weights: Dict[str, float], 
+                          position_manager=None, atr_data: Dict[str, float] = None):
         """
-        Execute portfolio rebalance
+        Execute portfolio rebalance with position tracking and stops
         
         Args:
             target_weights: Dict of {ticker: weight} where weight is % of capital
+            position_manager: PositionManager instance for state tracking
+            atr_data: Dict of {ticker: atr_value} for stop calculations
         """
         if not self.connected:
             print("Not connected to IB")
@@ -217,9 +216,16 @@ class IBExecutor:
         account_value = self.get_account_value()
         print(f"\nAccount Value: ${account_value:,.2f}")
         
-        # Get current positions
-        current_positions = self.get_current_positions()
-        print(f"Current Positions: {len(current_positions)}")
+        # Get current positions from IB
+        ib_positions = self.get_current_positions()
+        print(f"Current Positions: {len(ib_positions)}")
+        
+        # Sync position manager with IB if provided
+        if position_manager:
+            position_manager.sync_with_ib()
+            managed_positions = position_manager.get_all_positions()
+        else:
+            managed_positions = {}
         
         # Calculate target position sizes
         target_sizes = self.calculate_position_sizes(target_weights, account_value)
@@ -233,14 +239,23 @@ class IBExecutor:
         
         executed_trades = []
         
-        # Close positions not in target
-        for ticker in current_positions:
+        # Close positions not in target (with position manager handling)
+        for ticker in list(ib_positions.keys()):
             if ticker not in target_sizes:
                 print(f"\n  Closing {ticker}...")
                 contract = self.create_cfd_contract(ticker)
-                if contract:
-                    quantity = abs(current_positions[ticker])
-                    action = 'SELL' if current_positions[ticker] > 0 else 'BUY'
+                if contract and position_manager:
+                    # Use position manager to handle exit (cancels stops)
+                    success = position_manager.exit_position(
+                        contract, 
+                        reason='QUAD_CHANGE'
+                    )
+                    if success:
+                        executed_trades.append(ticker)
+                elif contract:
+                    # Fallback: direct order without position manager
+                    quantity = abs(ib_positions[ticker])
+                    action = 'SELL' if ib_positions[ticker] > 0 else 'BUY'
                     trade = self.place_order(contract, quantity, action)
                     executed_trades.append(trade)
         

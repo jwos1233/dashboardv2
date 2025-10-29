@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from signal_generator import SignalGenerator
 from ib_executor import IBExecutor
+from position_manager import PositionManager
 import json
 
 
