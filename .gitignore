@@ -11,6 +11,8 @@ env/
 position_state.json
 trade_history.csv
 signals_*.json
+pending_entries.json
+entry_rejections.csv
 
 # IDE
 .vscode/

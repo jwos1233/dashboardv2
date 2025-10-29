@@ -209,6 +209,10 @@ class SignalGenerator:
         # Fetch data
         price_data = self.fetch_market_data(lookback_days=150)
         
+        # Calculate and store EMA data
+        self.price_data = price_data
+        self.ema_data = price_data.ewm(span=self.ema_period, adjust=False).mean()
+        
         # Calculate quadrant scores
         quad_scores = self.calculate_quadrant_scores(price_data)
         top1, top2 = self.get_top_quadrants(quad_scores)
@@ -221,6 +225,19 @@ class SignalGenerator:
         
         # Calculate target weights
         target_weights = self.calculate_target_weights(price_data, top1, top2)
+        
+        # Calculate ATR for stop losses
+        atr_data = {}
+        if self.atr_stop_loss is not None and len(target_weights) > 0:
+            print(f"\n📐 Calculating ATR for stop losses ({self.atr_period}-day, {self.atr_stop_loss}x)...")
+            daily_returns = price_data.pct_change().abs()
+            atr = daily_returns.rolling(window=self.atr_period).mean() * price_data
+            
+            for ticker in target_weights.keys():
+                if ticker in atr.columns:
+                    atr_value = atr[ticker].iloc[-1]
+                    if pd.notna(atr_value):
+                        atr_data[ticker] = float(atr_value)
         
         # Calculate total leverage
         total_leverage = sum(target_weights.values())
@@ -255,7 +272,8 @@ class SignalGenerator:
             'target_weights': target_weights,
             'current_regime': f"{top1} + {top2}",
             'timestamp': datetime.now(),
-            'total_leverage': total_leverage
+            'total_leverage': total_leverage,
+            'atr_data': atr_data
         }
 
 

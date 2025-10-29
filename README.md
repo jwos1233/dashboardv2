@@ -98,7 +98,34 @@ This quantitative strategy combines macro regime detection with volatility-weigh
 
 ## 🚀 Live Trading
 
-### Quick Start
+### Two-Step Entry Process
+
+The system uses a **two-step confirmation** to match the backtest's 420% returns:
+
+```bash
+# STEP 1: Night run (after market close)
+python live_trader.py --step night
+
+# STEP 2: Morning run (before market open)
+python live_trader.py --step morning --live --port 4002
+```
+
+**Why two steps?**
+- Day 1: Generate signals from close prices
+- Day 2: Confirm EMA still valid before executing at open
+- **Result:** 28.1% rejection rate (as in backtest)
+- Avoids bad entries, improves returns by +228%
+
+See `TWO_STEP_ENTRY.md` for full details.
+
+### Automated Mode
+
+```bash
+# Runs both steps automatically (16:00 and 09:29)
+python live_trader.py --mode scheduled --live --port 4002
+```
+
+### Quick Start (Testing)
 
 ```bash
 # Install dependencies
@@ -107,11 +134,9 @@ pip install -r requirements.txt
 # Generate signals (Top 10 + ATR 2.0x automatically)
 python signal_generator.py
 
-# Run live trading (dry run)
-python live_trader.py --mode once
-
-# Run live trading (paper account)
-python live_trader.py --mode once --live --port 4002
+# Dry run test
+python live_trader.py --step night
+python live_trader.py --step morning  # Without --live
 ```
 
 See `STRATEGY_EXPLAINED.md` for complete entry/exit rules.
