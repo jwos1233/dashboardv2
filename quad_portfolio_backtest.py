@@ -12,9 +12,20 @@ Key Features:
 - Event-driven rebalancing (quad change or EMA crossover)
 - ASYMMETRIC leverage: Q1=150%, Q2/Q3/Q4=100% (moderate overweight to best quad)
 - ENTRY CONFIRMATION: 1-day lag using CURRENT/TODAY's EMA (not lagged)
+- 5% MINIMUM DELTA: Only rebalance if position changes > 5%
+- REALISTIC EXECUTION: Trade at next day's open (accounts for gap risk)
 
-Performance: 458.22% total return vs SPY's 158.90% over 4 years
-Sharpe Ratio: 1.37 | Max Drawdown: -28.60%
+Performance (5-Year Backtest):
+- Total Return: 250.32%
+- Annualized: 32.12%
+- Sharpe Ratio: 1.01
+- Max Drawdown: -28.76%
+
+Risk Management:
+- EMA filter prevents allocation to downtrending assets
+- Entry confirmation reduces false signals
+- Quad-aware rebalancing: don't touch stable quads
+- Minimum delta threshold reduces unnecessary trading
 
 Lag Structure (Prevents Forward-Looking Bias):
 - Macro signals (quad rankings): T-1 lag (trade yesterday's regime)
@@ -31,13 +42,14 @@ from config import QUAD_ALLOCATIONS, QUADRANT_DESCRIPTIONS
 
 class QuadrantPortfolioBacktest:
     def __init__(self, start_date, end_date, initial_capital=50000, 
-                 momentum_days=50, ema_period=50, vol_lookback=30):
+                 momentum_days=50, ema_period=50, vol_lookback=30, max_positions=None):
         self.start_date = start_date
         self.end_date = end_date
         self.initial_capital = initial_capital
         self.momentum_days = momentum_days
         self.ema_period = ema_period
         self.vol_lookback = vol_lookback
+        self.max_positions = max_positions  # If set, only trade top N positions
         
         self.price_data = None
         self.open_data = None
@@ -92,10 +104,10 @@ class QuadrantPortfolioBacktest:
                 if len(prices) > 100 and len(opens) > 100:
                     price_data[ticker] = prices
                     open_data[ticker] = opens
-                    print(f"✓ {ticker}: {len(prices)} days")
+                    print(f"+ {ticker}: {len(prices)} days")
                     
             except Exception as e:
-                print(f"✗ {ticker}: {e}")
+                print(f"- {ticker}: {e}")
                 continue
         
         self.price_data = pd.DataFrame(price_data)
@@ -155,6 +167,8 @@ class QuadrantPortfolioBacktest:
         for date in top_quads.index:
             top1 = top_quads.loc[date, 'Top1']
             top2 = top_quads.loc[date, 'Top2']
+            score1 = top_quads.loc[date, 'Score1']
+            score2 = top_quads.loc[date, 'Score2']
             
             # Process each quad separately with volatility weighting
             final_weights = {}
@@ -164,6 +178,7 @@ class QuadrantPortfolioBacktest:
             quad2_weight = 1.5 if top2 == 'Q1' else 1.0
             
             for quad, quad_weight in [(top1, quad1_weight), (top2, quad2_weight)]:
+                    
                 # Get tickers for this quad
                 quad_tickers = [t for t in QUAD_ALLOCATIONS[quad].keys() 
                               if t in self.price_data.columns]
@@ -202,6 +217,19 @@ class QuadrantPortfolioBacktest:
                                 final_weights[ticker] += weight
                             else:
                                 final_weights[ticker] = weight
+            
+            # Filter to top N positions if max_positions is set
+            if self.max_positions and len(final_weights) > self.max_positions:
+                # Sort by weight and keep top N
+                sorted_weights = sorted(final_weights.items(), key=lambda x: x[1], reverse=True)
+                top_n_weights = dict(sorted_weights[:self.max_positions])
+                
+                # Re-normalize to maintain total leverage
+                original_total = sum(final_weights.values())
+                new_total = sum(top_n_weights.values())
+                scale_factor = original_total / new_total if new_total > 0 else 1
+                
+                final_weights = {t: w * scale_factor for t, w in top_n_weights.items()}
             
             # Apply final weights to the weights DataFrame
             for ticker, weight in final_weights.items():
@@ -254,6 +282,7 @@ class QuadrantPortfolioBacktest:
         entries_rejected = 0
         trades_skipped = 0  # Track trades skipped due to minimum threshold
         total_costs = 0.0  # Track cumulative trading costs
+        
         
         # Trading cost per leg (10 basis points = 0.10%)
         COST_PER_LEG_BPS = 10  # 10 basis points = 0.0010

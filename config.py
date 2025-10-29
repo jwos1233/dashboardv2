@@ -168,8 +168,9 @@ QUAD_ALLOCATIONS = {
         'XLF': 0.30 * 0.333,     # 33% of 30% Cyclicals
         'XLI': 0.30 * 0.333,     # 33% of 30% Cyclicals
         'XLB': 0.30 * 0.334,     # 34% of 30% Cyclicals
-        'XOP': 0.15 * 0.50,      # 50% of 15% Energy
-        'FCG': 0.15 * 0.50,      # 50% of 15% Energy
+        'XOP': 0.15 * 0.333,     # 33% of 15% Energy
+        'FCG': 0.15 * 0.333,     # 33% of 15% Energy
+        'USO': 0.15 * 0.334,     # 34% of 15% Energy (Crude Oil)
         'VNQ': 0.10 * 0.50,      # 50% of 10% Real Assets
         'PAVE': 0.10 * 0.50,     # 50% of 10% Real Assets
         'VTV': 0.10 * 0.50,      # 50% of 10% Value
@@ -179,11 +180,12 @@ QUAD_ALLOCATIONS = {
         'FCG': 0.25 * 0.333,     # 33% of 25% Energy
         'XLE': 0.25 * 0.333,     # 33% of 25% Energy
         'XOP': 0.25 * 0.334,     # 34% of 25% Energy
-        'GLD': 0.30 * 0.20,      # 20% of 30% Commodities
-        'DBC': 0.30 * 0.20,      # 20% of 30% Commodities
-        'CPER': 0.30 * 0.20,     # 20% of 30% Commodities
-        'DBA': 0.30 * 0.20,      # 20% of 30% Commodities
-        'REMX': 0.30 * 0.20,     # 20% of 30% Commodities
+        'GLD': 0.30 * 0.167,     # 16.7% of 30% Commodities
+        'DBC': 0.30 * 0.167,     # 16.7% of 30% Commodities
+        'CPER': 0.30 * 0.167,    # 16.7% of 30% Commodities
+        'DBA': 0.30 * 0.167,     # 16.7% of 30% Commodities
+        'REMX': 0.30 * 0.167,    # 16.7% of 30% Commodities
+        'URA': 0.30 * 0.165,     # 16.5% of 30% Commodities (Uranium)
         'TIP': 0.20 * 0.50,      # 50% of 20% TIPS
         'VTIP': 0.20 * 0.50,     # 50% of 20% TIPS
         'VNQ': 0.10 * 0.50,      # 50% of 10% Real Assets
