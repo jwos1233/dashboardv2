@@ -272,6 +272,7 @@ class QuadrantPortfolioBacktest:
         # Calculate target weights
         print("Calculating target portfolio weights...")
         target_weights = self.calculate_target_weights(top_quads)
+        self.target_weights = target_weights  # Store for access
         
         # Simulate portfolio with EVENT-DRIVEN rebalancing + TRUE 1-DAY ENTRY LAG
         print("Simulating portfolio with TRUE 1-day entry confirmation + REALISTIC EXECUTION...")
@@ -286,6 +287,8 @@ class QuadrantPortfolioBacktest:
         prev_positions = pd.Series(0.0, index=target_weights.columns)  # Track previous positions for cost calculation
         pending_entries = {}  # {ticker: target_weight} - waiting for confirmation
         entry_prices = {}  # {ticker: entry_price} - for stop loss calculation
+        entry_dates = {}  # {ticker: entry_date} - for tracking entry history
+        entry_atrs = {}  # {ticker: atr_at_entry} - for stop calculation
         
         prev_top_quads = None
         prev_ema_status = {}
@@ -374,6 +377,10 @@ class QuadrantPortfolioBacktest:
                                     stop_loss_exits.append(ticker)
                                     actual_positions[ticker] = 0.0
                                     del entry_prices[ticker]
+                                    if ticker in entry_dates:
+                                        del entry_dates[ticker]
+                                    if ticker in entry_atrs:
+                                        del entry_atrs[ticker]
                                     stops_hit += 1
                 
                 # Determine if we need to rebalance
@@ -415,9 +422,14 @@ class QuadrantPortfolioBacktest:
                     # First, apply confirmed entries
                     for ticker, weight in confirmed_entries.items():
                         actual_positions[ticker] = weight
-                        # Record entry price for stop loss tracking
+                        # Record entry price, date, and ATR for stop loss tracking
                         if self.atr_stop_loss is not None and date in self.price_data.index:
                             entry_prices[ticker] = self.price_data.loc[date, ticker]
+                            entry_dates[ticker] = date
+                            if ticker in self.atr_data.columns:
+                                # Use ATR from SIGNAL date (yesterday) for stop calculation
+                                prev_date = target_weights.index[target_weights.index.get_loc(date) - 1]
+                                entry_atrs[ticker] = self.atr_data.loc[prev_date, ticker]
                     
                     # Now handle the rest of the rebalancing
                     for ticker in target_weights.columns:
@@ -436,9 +448,13 @@ class QuadrantPortfolioBacktest:
                         if target_weight == 0 and current_position > 0:
                             # Exit immediately (no lag)
                             actual_positions[ticker] = 0
-                            # Clear entry price tracking
+                            # Clear entry tracking
                             if ticker in entry_prices:
                                 del entry_prices[ticker]
+                            if ticker in entry_dates:
+                                del entry_dates[ticker]
+                            if ticker in entry_atrs:
+                                del entry_atrs[ticker]
                         elif target_weight > 0 and current_position == 0:
                             # New entry - add to pending (wait for confirmation using TOMORROW's EMA)
                             if ticker not in confirmed_entries:  # Don't re-add if just confirmed
@@ -520,6 +536,9 @@ class QuadrantPortfolioBacktest:
         
         self.portfolio_value = portfolio_value
         self.total_trading_costs = total_costs
+        self.entry_prices = entry_prices  # Current open positions entry prices
+        self.entry_dates = entry_dates    # Current open positions entry dates
+        self.entry_atrs = entry_atrs      # Current open positions entry ATRs
         
         print(f"  Total rebalances: {rebalance_count} (out of {len(target_weights)-1} days)")
         print(f"  Entries confirmed: {entries_confirmed}")

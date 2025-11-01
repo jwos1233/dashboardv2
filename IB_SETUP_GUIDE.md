@@ -599,3 +599,5 @@ python live_trader.py --mode once --live --port 4001
 
 **Good luck with your live trading! Start with paper, be patient, and follow the process.** 🚀
 
+
+
