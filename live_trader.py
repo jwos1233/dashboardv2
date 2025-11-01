@@ -84,7 +84,23 @@ class LiveTrader:
             # Send Telegram notification
             if self.telegram:
                 try:
-                    self.telegram.send_night_alert(signals, len(signals['target_weights']))
+                    # Get account value and current positions for TG alert
+                    account_value = 50000
+                    current_positions = {}
+                    try:
+                        with IBExecutor(port=self.ib_port) as ib_exec:
+                            if ib_exec.connected:
+                                account_value = ib_exec.get_account_value()
+                                current_positions = ib_exec.get_current_positions()
+                    except:
+                        pass
+                    
+                    self.telegram.send_night_alert(
+                        signals, 
+                        len(signals['target_weights']),
+                        account_value=account_value,
+                        current_positions=current_positions
+                    )
                     print("+ Telegram notification sent")
                 except Exception as e:
                     print(f"! Telegram notification failed: {e}")
@@ -326,84 +342,197 @@ class LiveTrader:
         print(f"Top Quadrants: {signals['top_quadrants'][0]}, {signals['top_quadrants'][1]}")
         print(f"Total Leverage: {signals['total_leverage']:.2f}x")
         
+        # Get account value (default to $50k if not available)
+        account_value = 50000  # Default
+        try:
+            with IBExecutor(port=self.ib_port) as ib_exec:
+                if ib_exec.connected:
+                    account_value = ib_exec.get_account_value()
+        except:
+            pass  # Use default
+        
+        print(f"Account Value: ${account_value:,.2f}")
+        
+        # Get current positions
+        current_positions = {}
+        try:
+            with IBExecutor(port=self.ib_port) as ib_exec:
+                if ib_exec.connected:
+                    current_positions = ib_exec.get_current_positions()
+        except:
+            pass
+        
+        # Show current positions
+        if current_positions:
+            print(f"\n{'='*70}")
+            print("CURRENT POSITIONS")
+            print(f"{'='*70}")
+            print(f"{'Ticker':<8} {'Quantity':<12} {'Est. Value':<15}")
+            print("-"*70)
+            
+            total_current_value = 0
+            for ticker, qty in sorted(current_positions.items()):
+                # Rough estimate (would need prices for exact)
+                est_value = qty * 100  # Placeholder
+                print(f"{ticker:<8} {qty:>10.2f}  ${est_value:>12,.2f}")
+                total_current_value += est_value
+            
+            print("-"*70)
+            print(f"{'TOTAL':<8} {'':>10}  ${total_current_value:>12,.2f}")
+        else:
+            print(f"\n{'='*70}")
+            print("CURRENT POSITIONS: None (or unable to fetch)")
+            print(f"{'='*70}")
+        
+        # Show target positions
         print(f"\n{'='*70}")
-        print("PENDING ENTRIES (Subject to morning EMA confirmation)")
+        print("TARGET POSITIONS (ALL)")
         print(f"{'='*70}")
-        print(f"{'Ticker':<8} {'Weight':<10} {'Current EMA':<15} {'Status':<20}")
+        print(f"{'Ticker':<8} {'Weight %':<10} {'Target $':<15} {'Current EMA':<15}")
         print("-"*70)
         
         sorted_weights = sorted(signals['target_weights'].items(), 
                                key=lambda x: x[1], reverse=True)
         
+        total_target_value = 0
         for ticker, weight in sorted_weights:
+            target_usd = account_value * weight
+            total_target_value += target_usd
             ema = ema_data.get(ticker, 'N/A')
             ema_str = f"${ema:.2f}" if ema != 'N/A' else 'N/A'
             
-            print(f"{ticker:<8} {weight*100:>8.2f}%  {ema_str:<15} Pending confirmation")
+            print(f"{ticker:<8} {weight*100:>8.2f}%  ${target_usd:>12,.2f}  {ema_str:<15}")
+        
+        print("-"*70)
+        print(f"{'TOTAL':<8} {signals['total_leverage']*100:>8.2f}%  ${total_target_value:>12,.2f}")
+        
+        # Show pending entries with USD values
+        print(f"\n{'='*70}")
+        print("PENDING ENTRIES FOR TOMORROW (Subject to EMA confirmation)")
+        print(f"{'='*70}")
+        print(f"{'Ticker':<8} {'Target $':<15} {'Weight %':<10} {'Status':<20}")
+        print("-"*70)
+        
+        for ticker, weight in sorted_weights:
+            target_usd = account_value * weight
+            print(f"{ticker:<8} ${target_usd:>12,.2f}  {weight*100:>8.2f}%  Pending confirmation")
         
         print(f"\n{'='*70}")
-        print("WHAT WILL HAPPEN TOMORROW MORNING:")
+        print("TOMORROW MORNING PROCESS:")
         print(f"{'='*70}")
         print(f"1. Re-fetch current prices and EMAs")
         print(f"2. For each position above:")
         print(f"   - Check: Is price still > EMA?")
         print(f"   - YES -> Execute entry at market open")
         print(f"   - NO  -> Reject entry (trend broken)")
-        print(f"3. Expected rejection rate: ~28% (2-3 positions)")
-        print(f"4. Place ATR 2.0x stops for confirmed entries")
-        print(f"5. Adjust existing positions (delta-only if >5% change)")
+        print(f"3. Expected: ~{len(sorted_weights) * 0.28:.0f} positions rejected (~28%)")
+        print(f"4. Confirmed entries: Place ATR 2.0x stop orders")
+        print(f"5. Existing positions: Adjust if delta > 5%")
         print("="*70)
     
     def save_night_plan(self, signals: dict, ema_data: dict):
         """Save detailed plan to file"""
         filename = f"night_plan_{datetime.now().strftime('%Y%m%d')}.txt"
         
+        # Get account value
+        account_value = 50000
+        try:
+            with IBExecutor(port=self.ib_port) as ib_exec:
+                if ib_exec.connected:
+                    account_value = ib_exec.get_account_value()
+        except:
+            pass
+        
+        # Get current positions
+        current_positions = {}
+        try:
+            with IBExecutor(port=self.ib_port) as ib_exec:
+                if ib_exec.connected:
+                    current_positions = ib_exec.get_current_positions()
+        except:
+            pass
+        
         with open(filename, 'w') as f:
-            f.write("="*70 + "\n")
+            f.write("="*80 + "\n")
             f.write(f"NIGHT SIGNAL GENERATION - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write("="*70 + "\n\n")
+            f.write("="*80 + "\n\n")
             
             f.write(f"Market Regime: {signals['current_regime']}\n")
             f.write(f"Top Quadrants: {signals['top_quadrants'][0]}, {signals['top_quadrants'][1]}\n")
-            f.write(f"Total Target Leverage: {signals['total_leverage']:.2f}x\n\n")
+            f.write(f"Total Target Leverage: {signals['total_leverage']:.2f}x\n")
+            f.write(f"Account Value: ${account_value:,.2f}\n\n")
             
             f.write("QUADRANT SCORES:\n")
-            f.write("-"*70 + "\n")
+            f.write("-"*80 + "\n")
             for quad, score in signals['quadrant_scores'].items():
                 f.write(f"  {quad}: {score:>7.2f}%\n")
             
-            f.write("\n" + "="*70 + "\n")
-            f.write("PENDING ENTRIES FOR TOMORROW\n")
-            f.write("="*70 + "\n")
-            f.write(f"{'Ticker':<8} {'Weight':<10} {'Weight %':<10} {'Current EMA':<15}\n")
-            f.write("-"*70 + "\n")
+            # Current positions
+            f.write("\n" + "="*80 + "\n")
+            f.write("CURRENT POSITIONS\n")
+            f.write("="*80 + "\n")
+            if current_positions:
+                f.write(f"{'Ticker':<8} {'Quantity':<12}\n")
+                f.write("-"*80 + "\n")
+                for ticker, qty in sorted(current_positions.items()):
+                    f.write(f"{ticker:<8} {qty:>10.2f}\n")
+            else:
+                f.write("None (or unable to fetch)\n")
+            
+            # Target positions
+            f.write("\n" + "="*80 + "\n")
+            f.write("TARGET POSITIONS (ALL)\n")
+            f.write("="*80 + "\n")
+            f.write(f"{'Ticker':<8} {'Weight %':<10} {'Target $':<15} {'Current EMA':<15}\n")
+            f.write("-"*80 + "\n")
             
             sorted_weights = sorted(signals['target_weights'].items(), 
                                    key=lambda x: x[1], reverse=True)
             
+            total_target_value = 0
             for ticker, weight in sorted_weights:
+                target_usd = account_value * weight
+                total_target_value += target_usd
                 ema = ema_data.get(ticker, 'N/A')
                 ema_str = f"${ema:.2f}" if ema != 'N/A' else 'N/A'
-                f.write(f"{ticker:<8} {weight:<10.4f} {weight*100:>8.2f}%  {ema_str:<15}\n")
+                f.write(f"{ticker:<8} {weight*100:>8.2f}%  ${target_usd:>12,.2f}  {ema_str:<15}\n")
             
-            f.write("\n" + "="*70 + "\n")
+            f.write("-"*80 + "\n")
+            f.write(f"{'TOTAL':<8} {signals['total_leverage']*100:>8.2f}%  ${total_target_value:>12,.2f}\n")
+            
+            # Pending entries
+            f.write("\n" + "="*80 + "\n")
+            f.write("PENDING ENTRIES FOR TOMORROW (Subject to EMA confirmation)\n")
+            f.write("="*80 + "\n")
+            f.write(f"{'Ticker':<8} {'Target $':<15} {'Weight %':<10}\n")
+            f.write("-"*80 + "\n")
+            
+            for ticker, weight in sorted_weights:
+                target_usd = account_value * weight
+                f.write(f"{ticker:<8} ${target_usd:>12,.2f}  {weight*100:>8.2f}%\n")
+            
+            f.write("-"*80 + "\n")
+            f.write(f"TOTAL:    ${total_target_value:>12,.2f}  {signals['total_leverage']*100:>8.2f}%\n")
+            
+            f.write("\n" + "="*80 + "\n")
             f.write("TOMORROW'S PROCESS:\n")
-            f.write("="*70 + "\n")
+            f.write("="*80 + "\n")
             f.write("1. Morning Run (9:29 AM):\n")
-            f.write("   python live_trader.py --step morning --live --port XXXX\n\n")
+            f.write(f"   python live_trader.py --step morning --live --port {self.ib_port}\n\n")
             f.write("2. Entry Confirmation:\n")
             f.write("   - Re-check EMA for each pending position\n")
             f.write("   - Only enter if price > EMA (trend confirmed)\n")
-            f.write("   - Expected rejections: ~28% (2-3 positions)\n\n")
+            f.write(f"   - Expected rejections: ~{len(sorted_weights) * 0.28:.0f} positions (~28%)\n\n")
             f.write("3. Execution:\n")
             f.write("   - Enter confirmed positions at market open\n")
             f.write("   - Place ATR 2.0x stop orders\n")
-            f.write("   - Adjust existing positions (delta-only)\n\n")
+            f.write("   - Adjust existing positions (delta-only if >5%)\n\n")
             f.write("4. Result:\n")
             f.write("   - Execution report saved to morning_report_YYYYMMDD.txt\n")
             f.write("   - Trade history updated in trade_history.csv\n")
             f.write("   - Position state updated in position_state.json\n")
-            f.write("="*70 + "\n")
+            f.write("   - Telegram notification sent\n")
+            f.write("="*80 + "\n")
         
         print(f"+ Plan saved to {filename}")
     

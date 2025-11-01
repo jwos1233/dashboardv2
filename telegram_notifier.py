@@ -39,15 +39,19 @@ class TelegramNotifier:
             print(f"Failed to send Telegram message: {e}")
             return False
     
-    def send_night_alert(self, signals: Dict, pending_count: int):
-        """Send night run summary"""
+    def send_night_alert(self, signals: Dict, pending_count: int, 
+                         account_value: float = 50000, current_positions: Dict = None):
+        """Send night run summary with USD values"""
         regime = signals.get('current_regime', 'Unknown')
         top_quads = signals.get('top_quadrants', ('?', '?'))
         leverage = signals.get('total_leverage', 0)
         
-        # Get top 5 positions by weight
+        # Get all positions by weight
         weights = signals.get('target_weights', {})
-        sorted_weights = sorted(weights.items(), key=lambda x: x[1], reverse=True)[:5]
+        sorted_weights = sorted(weights.items(), key=lambda x: x[1], reverse=True)
+        
+        # Calculate total target value
+        total_target = sum(account_value * w for w in weights.values())
         
         message = f"""
 <b>🌙 NIGHT SIGNAL GENERATION</b>
@@ -56,21 +60,35 @@ class TelegramNotifier:
 <b>Market Regime:</b> {regime}
 <b>Top Quadrants:</b> {top_quads[0]}, {top_quads[1]}
 <b>Target Leverage:</b> {leverage:.2f}x
-
-<b>📋 Pending Entries: {pending_count}</b>
+<b>Account Value:</b> ${account_value:,.0f}
 """
         
-        if sorted_weights:
-            message += "\n<b>Top 5 Positions:</b>\n"
-            for ticker, weight in sorted_weights:
-                message += f"  • {ticker}: {weight*100:.1f}%\n"
+        # Show current positions if available
+        if current_positions and len(current_positions) > 0:
+            message += f"\n<b>📊 Current Positions: {len(current_positions)}</b>\n"
+            for ticker in sorted(current_positions.keys())[:5]:
+                message += f"  • {ticker}\n"
+            if len(current_positions) > 5:
+                message += f"  <i>...and {len(current_positions) - 5} more</i>\n"
+        
+        # Show all target positions with USD
+        message += f"\n<b>🎯 Target Positions: {len(sorted_weights)}</b>\n"
+        message += f"<b>Total Target: ${total_target:,.0f}</b>\n\n"
+        
+        for ticker, weight in sorted_weights:
+            target_usd = account_value * weight
+            message += f"  • {ticker}: {weight*100:.1f}% (${target_usd:,.0f})\n"
+        
+        # Expected rejections
+        expected_rejections = int(len(sorted_weights) * 0.28)
+        expected_confirmed = len(sorted_weights) - expected_rejections
         
         message += f"""
-<b>⏰ Next Step:</b>
-Run morning confirmation at 9:29 AM
-Expected rejections: ~28% (2-3 positions)
+<b>⏰ Tomorrow Morning (9:29 AM):</b>
+Expected confirmed: ~{expected_confirmed}
+Expected rejected: ~{expected_rejections} (28%)
 
-<i>Signals saved to night_plan_{datetime.now().strftime('%Y%m%d')}.txt</i>
+<i>Full details: night_plan_{datetime.now().strftime('%Y%m%d')}.txt</i>
 """
         
         self.send_message(message)
