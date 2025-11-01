@@ -1,0 +1,190 @@
+"""
+Telegram Notification System
+============================
+
+Send alerts for night and morning trading runs
+"""
+
+import requests
+from datetime import datetime
+from typing import Dict, List
+
+
+class TelegramNotifier:
+    """Send trading alerts via Telegram"""
+    
+    def __init__(self, token: str, chat_id: str):
+        self.token = token
+        self.chat_id = chat_id
+        self.base_url = f"https://api.telegram.org/bot{token}"
+    
+    def send_message(self, message: str):
+        """Send a message to Telegram"""
+        try:
+            url = f"{self.base_url}/sendMessage"
+            data = {
+                "chat_id": self.chat_id,
+                "text": message,
+                "parse_mode": "HTML"
+            }
+            response = requests.post(url, data=data, timeout=10)
+            
+            if response.status_code == 200:
+                return True
+            else:
+                print(f"Telegram API error: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"Failed to send Telegram message: {e}")
+            return False
+    
+    def send_night_alert(self, signals: Dict, pending_count: int):
+        """Send night run summary"""
+        regime = signals.get('current_regime', 'Unknown')
+        top_quads = signals.get('top_quadrants', ('?', '?'))
+        leverage = signals.get('total_leverage', 0)
+        
+        # Get top 5 positions by weight
+        weights = signals.get('target_weights', {})
+        sorted_weights = sorted(weights.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        message = f"""
+<b>🌙 NIGHT SIGNAL GENERATION</b>
+{datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+<b>Market Regime:</b> {regime}
+<b>Top Quadrants:</b> {top_quads[0]}, {top_quads[1]}
+<b>Target Leverage:</b> {leverage:.2f}x
+
+<b>📋 Pending Entries: {pending_count}</b>
+"""
+        
+        if sorted_weights:
+            message += "\n<b>Top 5 Positions:</b>\n"
+            for ticker, weight in sorted_weights:
+                message += f"  • {ticker}: {weight*100:.1f}%\n"
+        
+        message += f"""
+<b>⏰ Next Step:</b>
+Run morning confirmation at 9:29 AM
+Expected rejections: ~28% (2-3 positions)
+
+<i>Signals saved to night_plan_{datetime.now().strftime('%Y%m%d')}.txt</i>
+"""
+        
+        self.send_message(message)
+    
+    def send_morning_alert(self, confirmed: Dict, rejected: Dict, 
+                          trades_executed: List, positions_summary: Dict):
+        """Send morning execution summary"""
+        
+        total = len(confirmed) + len(rejected)
+        rejection_rate = (len(rejected) / total * 100) if total > 0 else 0
+        
+        message = f"""
+<b>☀️ MORNING EXECUTION COMPLETE</b>
+{datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+<b>CONFIRMATION RESULTS:</b>
+✅ Confirmed: {len(confirmed)}
+❌ Rejected: {len(rejected)}
+📊 Rejection Rate: {rejection_rate:.1f}%
+"""
+        
+        if confirmed:
+            message += "\n<b>Confirmed Entries:</b>\n"
+            for ticker in sorted(confirmed.keys()):
+                message += f"  ✅ {ticker}\n"
+        
+        if rejected:
+            message += "\n<b>Rejected Entries:</b>\n"
+            for ticker in sorted(rejected.keys()):
+                message += f"  ❌ {ticker}\n"
+        
+        # Position changes
+        added = positions_summary.get('added', [])
+        removed = positions_summary.get('removed', [])
+        adjusted = positions_summary.get('adjusted', [])
+        
+        if added or removed or adjusted:
+            message += "\n<b>POSITION CHANGES:</b>\n"
+            
+            if added:
+                message += f"  📈 New: {len(added)}\n"
+                for item in added[:3]:  # Show first 3
+                    message += f"    • {item}\n"
+            
+            if removed:
+                message += f"  📉 Closed: {len(removed)}\n"
+                for item in removed[:3]:
+                    message += f"    • {item}\n"
+            
+            if adjusted:
+                message += f"  🔄 Adjusted: {len(adjusted)}\n"
+        
+        # Trades
+        trade_count = len(trades_executed) if trades_executed else 0
+        message += f"\n<b>💼 Trades Executed: {trade_count}</b>\n"
+        
+        if trade_count == 0:
+            message += "<i>No changes needed (positions within 5% threshold)</i>\n"
+        
+        message += f"\n<i>Full report: morning_report_{datetime.now().strftime('%Y%m%d')}.txt</i>"
+        
+        self.send_message(message)
+    
+    def send_error_alert(self, error_message: str, context: str = "Unknown"):
+        """Send error alert"""
+        message = f"""
+<b>🚨 ERROR ALERT</b>
+{datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+<b>Context:</b> {context}
+
+<b>Error:</b>
+<code>{error_message}</code>
+
+<i>Check logs for details</i>
+"""
+        self.send_message(message)
+    
+    def send_test_message(self):
+        """Send test message to verify connection"""
+        message = f"""
+<b>✅ TEST MESSAGE</b>
+{datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+Telegram notifications are working!
+You will receive alerts for:
+  • Night signal generation
+  • Morning execution results
+  • Errors and warnings
+
+<i>Macro Quadrant Strategy - Live Trading</i>
+"""
+        return self.send_message(message)
+
+
+# Initialize with your credentials
+TELEGRAM_TOKEN = "7206335521:AAGQeuhik1SrN_qMakb9bxkI1iAJmg8A3Wo"
+TELEGRAM_CHAT_ID = "7119645510"
+
+
+def get_notifier():
+    """Get configured Telegram notifier"""
+    return TelegramNotifier(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
+
+
+if __name__ == "__main__":
+    # Test Telegram connection
+    print("Testing Telegram connection...")
+    notifier = get_notifier()
+    
+    if notifier.send_test_message():
+        print("[SUCCESS] Test message sent successfully!")
+        print("Check your Telegram for the message")
+    else:
+        print("[FAILED] Failed to send test message")
+        print("Check your token and chat ID")
+

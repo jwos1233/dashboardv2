@@ -14,7 +14,7 @@ This matches the backtest's 28.1% rejection rate.
 import json
 import os
 from datetime import datetime, date
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import pandas as pd
 import yfinance as yf
 
@@ -106,7 +106,7 @@ class PendingOrdersManager:
         return new_entries
     
     def confirm_and_get_entries(self, price_data: pd.DataFrame, 
-                                ema_data: pd.DataFrame) -> Dict:
+                                ema_data: pd.DataFrame) -> Tuple[Dict, Dict]:
         """
         Confirm pending entries using current EMA data
         
@@ -117,11 +117,11 @@ class PendingOrdersManager:
             ema_data: Current 50-day EMA data
             
         Returns:
-            Dict of confirmed entries ready to execute
+            Tuple of (confirmed_entries, rejected_entries)
         """
         if not self.pending_orders['entries']:
             print("ℹ️ No pending entries to confirm")
-            return {}
+            return {}, {}
         
         print(f"\n{'='*70}")
         print(f"ENTRY CONFIRMATION - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -191,7 +191,7 @@ class PendingOrdersManager:
         self.pending_orders['entries'] = {}
         self.save_pending()
         
-        return confirmed
+        return confirmed, rejected
     
     def get_current_market_data(self, tickers: List[str]) -> tuple:
         """

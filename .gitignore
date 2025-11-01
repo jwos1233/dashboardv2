@@ -13,6 +13,8 @@ trade_history.csv
 signals_*.json
 pending_entries.json
 entry_rejections.csv
+night_plan_*.txt
+morning_report_*.txt
 
 # IDE
 .vscode/
