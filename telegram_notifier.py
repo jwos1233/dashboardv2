@@ -1,4 +1,3 @@
-"""
 Telegram Notification System
 ============================
 
@@ -40,8 +39,12 @@ class TelegramNotifier:
             return False
     
     def send_night_alert(self, signals: Dict, pending_count: int, 
-                         account_value: float = 50000, current_positions: Dict = None):
-        """Send night run summary with USD values"""
+                         account_value: float, current_positions: Dict = None):
+        """Send night run summary with USD values
+        
+        Args:
+            account_value: REAL account value from IB Gateway (required, no default)
+        """
         regime = signals.get('current_regime', 'Unknown')
         top_quads = signals.get('top_quadrants', ('?', '?'))
         leverage = signals.get('total_leverage', 0)
@@ -60,7 +63,7 @@ class TelegramNotifier:
 <b>Market Regime:</b> {regime}
 <b>Top Quadrants:</b> {top_quads[0]}, {top_quads[1]}
 <b>Target Leverage:</b> {leverage:.2f}x
-<b>Account Value:</b> ${account_value:,.0f}
+<b>Account Value:</b> ${account_value:,.2f} 💰
 """
         
         # Show current positions if available
@@ -205,4 +208,3 @@ if __name__ == "__main__":
     else:
         print("[FAILED] Failed to send test message")
         print("Check your token and chat ID")
-
