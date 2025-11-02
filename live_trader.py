@@ -1,10 +1,3 @@
-"""
-Live Trading Orchestrator for Macro Quadrant Strategy
-======================================================
-
-Main script to generate signals and execute trades via Interactive Brokers
-"""
-
 import schedule
 import time
 from datetime import datetime
@@ -41,6 +34,22 @@ class LiveTrader:
         self.current_positions = {}
         self.last_signal_time = None
         self.last_trades = []
+    
+    def _get_account_value(self):
+        """Helper to get real account value from IB Gateway"""
+        try:
+            with IBExecutor(port=self.ib_port) as ib_exec:
+                if ib_exec.connected:
+                    account_summary = ib_exec.ib.accountSummary()
+                    for item in account_summary:
+                        if item.tag == 'NetLiquidation':
+                            value = float(item.value)
+                            print(f"✓ Fetched account value: ${value:,.2f}")
+                            return value
+        except Exception as e:
+            print(f"! Warning: Could not fetch account value: {e}")
+        print("! Using fallback account value: $50,000")
+        return 50000  # Fallback only if connection fails
         
     def generate_signals_night(self):
         """
@@ -85,12 +94,11 @@ class LiveTrader:
             if self.telegram:
                 try:
                     # Get account value and current positions for TG alert
-                    account_value = 50000
+                    account_value = self._get_account_value()
                     current_positions = {}
                     try:
                         with IBExecutor(port=self.ib_port) as ib_exec:
                             if ib_exec.connected:
-                                account_value = ib_exec.get_account_value()
                                 current_positions = ib_exec.get_current_positions()
                     except:
                         pass
@@ -342,16 +350,8 @@ class LiveTrader:
         print(f"Top Quadrants: {signals['top_quadrants'][0]}, {signals['top_quadrants'][1]}")
         print(f"Total Leverage: {signals['total_leverage']:.2f}x")
         
-        # Get account value (default to $50k if not available)
-        account_value = 50000  # Default
-        try:
-            with IBExecutor(port=self.ib_port) as ib_exec:
-                if ib_exec.connected:
-                    account_value = ib_exec.get_account_value()
-        except:
-            pass  # Use default
-        
-        print(f"Account Value: ${account_value:,.2f}")
+        # Get real account value from IB
+        account_value = self._get_account_value()
         
         # Get current positions
         current_positions = {}
@@ -434,14 +434,8 @@ class LiveTrader:
         """Save detailed plan to file"""
         filename = f"night_plan_{datetime.now().strftime('%Y%m%d')}.txt"
         
-        # Get account value
-        account_value = 50000
-        try:
-            with IBExecutor(port=self.ib_port) as ib_exec:
-                if ib_exec.connected:
-                    account_value = ib_exec.get_account_value()
-        except:
-            pass
+        # Get real account value from IB
+        account_value = self._get_account_value()
         
         # Get current positions
         current_positions = {}
@@ -752,13 +746,13 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   # Night run (after close) - Generate signals
-  python live_trader.py --step night
+  python live_trader.py --step night --port 4001
   
   # Morning run (before open) - Confirm and execute
-  python live_trader.py --step morning --live --port 4002
+  python live_trader.py --step morning --live --port 4001
   
   # Scheduled mode (runs both automatically)
-  python live_trader.py --mode scheduled --live --port 4002
+  python live_trader.py --mode scheduled --live --port 4001
         """
     )
     
@@ -806,4 +800,3 @@ Examples:
             night_time=args.night_time, 
             morning_time=args.morning_time
         )
-
