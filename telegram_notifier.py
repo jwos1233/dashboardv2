@@ -1,8 +1,8 @@
-## Telegram Notification System
-============================
+##Telegram Notification System
+##============================
 
-Send alerts for night and morning trading runs
-"""
+##Send alerts for night and morning trading runs
+##"""
 
 import requests
 from datetime import datetime
