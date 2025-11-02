@@ -181,6 +181,114 @@ class PositionManager:
             print(f"  ✗ Error entering position {ticker}: {e}")
             return False
     
+    def adjust_position(self, contract: Contract, new_quantity: int) -> bool:
+        """
+        Adjust an existing position size (CRITICAL: keeps original stop price)
+        
+        This is used when rebalancing changes position size.
+        The stop price is NEVER moved - only the quantity is adjusted.
+        This matches the backtest behavior.
+        
+        Args:
+            contract: IB contract
+            new_quantity: New total quantity desired
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        ticker = contract.symbol
+        
+        if ticker not in self.state['positions']:
+            print(f"  ⚠️ Cannot adjust {ticker} - no existing position")
+            return False
+        
+        position = self.state['positions'][ticker]
+        old_quantity = position['shares']
+        
+        # No change needed
+        if new_quantity == old_quantity:
+            print(f"  ℹ️ {ticker}: No adjustment needed ({old_quantity} shares)")
+            return True
+        
+        try:
+            # 1. Cancel old stop order
+            old_stop_order_id = position.get('stop_order_id')
+            if old_stop_order_id:
+                try:
+                    self.ib.cancelOrder(old_stop_order_id)
+                    print(f"  ✓ Cancelled old stop order for {ticker}")
+                except Exception as e:
+                    print(f"  ⚠️ Could not cancel old stop: {e}")
+            
+            # 2. Place adjustment order (buy more or sell some)
+            delta = new_quantity - old_quantity
+            action = 'BUY' if delta > 0 else 'SELL'
+            abs_delta = abs(delta)
+            
+            adjustment_order = Order()
+            adjustment_order.action = action
+            adjustment_order.orderType = 'MKT'
+            adjustment_order.totalQuantity = abs_delta
+            adjustment_order.transmit = True
+            
+            print(f"  🔄 Adjusting {ticker}: {old_quantity} → {new_quantity} ({action} {abs_delta})")
+            adjust_trade = self.ib.placeOrder(contract, adjustment_order)
+            
+            # Wait for fill
+            for i in range(30):
+                self.ib.sleep(1)
+                if adjust_trade.orderStatus.status in ['Filled', 'Cancelled']:
+                    break
+            
+            if adjust_trade.orderStatus.status != 'Filled':
+                print(f"  ✗ Adjustment order not filled: {adjust_trade.orderStatus.status}")
+                return False
+            
+            fill_price = adjust_trade.orderStatus.avgFillPrice
+            print(f"  ✓ Filled: {action} {abs_delta} {ticker} @ ${fill_price:.2f}")
+            
+            # 3. Place NEW stop order at ORIGINAL stop price with NEW quantity
+            # THIS IS CRITICAL: We use the ORIGINAL stop_price, NOT a new calculation
+            original_stop_price = position['stop_price']
+            
+            new_stop_order = Order()
+            new_stop_order.action = 'SELL'
+            new_stop_order.orderType = 'STP'
+            new_stop_order.auxPrice = original_stop_price  # SAME stop price!
+            new_stop_order.totalQuantity = new_quantity
+            new_stop_order.transmit = True
+            
+            print(f"  🛑 New STOP: Sell {new_quantity} {ticker} @ ${original_stop_price:.2f} (SAME price)")
+            new_stop_trade = self.ib.placeOrder(contract, new_stop_order)
+            
+            # 4. Update state with new quantity and stop order ID
+            # KEEP original entry_price and stop_price!
+            position['shares'] = new_quantity
+            position['stop_order_id'] = new_stop_trade.order.orderId
+            position['last_adjusted'] = datetime.now().isoformat()
+            self.save_state()
+            
+            # 5. Log adjustment
+            self._log_trade({
+                'date': datetime.now().isoformat(),
+                'ticker': ticker,
+                'action': 'ADJUST',
+                'old_quantity': old_quantity,
+                'new_quantity': new_quantity,
+                'delta': delta,
+                'fill_price': fill_price,
+                'stop_price': original_stop_price,  # Log that stop didn't move
+                'reason': 'REBALANCE'
+            })
+            
+            print(f"  ✓ Position adjusted: {ticker} ({old_quantity} → {new_quantity})")
+            print(f"  🛑 Stop remains at: ${original_stop_price:.2f} (UNCHANGED)")
+            return True
+            
+        except Exception as e:
+            print(f"  ✗ Error adjusting position {ticker}: {e}")
+            return False
+    
     def exit_position(self, contract: Contract, reason: str, 
                      current_price: Optional[float] = None) -> bool:
         """
@@ -372,6 +480,3 @@ class PositionManager:
                   f"${pos['stop_price']:>9.2f} {days_held:>6}")
         
         print(f"{'='*70}\n")
-
-
-
