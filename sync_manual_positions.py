@@ -45,14 +45,30 @@ class ManualPositionSync:
         print(f"\nConnecting to IB on port {self.ib_port}...")
         
         self.ib = IB()
-        self.ib.RequestTimeout = 60  # Increase timeout for slower connections
+        self.ib.RequestTimeout = 120  # Longer timeout for connection issues
         
         try:
-            # Use readonly=True to avoid timeout issues with executions
-            self.ib.connect('127.0.0.1', self.ib_port, clientId=1, readonly=True)
-            print("+ Connected to IB (readonly mode)")
-            return True
+            # Connect normally (not readonly) to access stop orders
+            # The timeout errors are expected and won't block the connection
+            self.ib.connect('127.0.0.1', self.ib_port, clientId=1, readonly=False)
+            
+            # Give it a moment to settle after those error messages
+            import time
+            time.sleep(2)
+            
+            if self.ib.isConnected():
+                print("+ Connected to IB")
+                return True
+            else:
+                print("- Connection established but not confirmed as connected")
+                return False
+                
         except Exception as e:
+            # Even with timeout errors, check if we're connected
+            if hasattr(self, 'ib') and self.ib and self.ib.isConnected():
+                print("+ Connected to IB (despite timeout warnings)")
+                return True
+            
             print(f"- Failed to connect: {e}")
             print("\nMake sure:")
             print("  1. IB Gateway or TWS is running")
@@ -76,20 +92,14 @@ class ManualPositionSync:
         print(f"\nFound {len(self.positions)} positions:")
         for pos in self.positions:
             symbol = pos.contract.symbol if hasattr(pos.contract, 'symbol') else pos.contract.localSymbol
+            contract_type = pos.contract.secType
             quantity = pos.position
-            avg_cost = pos.avgCost
+            avg_cost = pos.avgCost if hasattr(pos, 'avgCost') else 0.0
             
-            # These may not be available in readonly mode
-            market_value = getattr(pos, 'marketValue', None)
-            unrealized_pnl = getattr(pos, 'unrealizedPNL', None)
-            
-            print(f"  {symbol}:")
+            print(f"  {symbol} ({contract_type}):")
             print(f"    Quantity: {quantity:.2f}")
-            print(f"    Avg Cost: ${avg_cost:.2f}")
-            if market_value is not None:
-                print(f"    Market Value: ${market_value:,.2f}")
-            if unrealized_pnl is not None:
-                print(f"    Unrealized P&L: ${unrealized_pnl:,.2f}")
+            if avg_cost > 0:
+                print(f"    Avg Cost: ${avg_cost:.2f}")
         
         return True
     
@@ -99,33 +109,48 @@ class ManualPositionSync:
         print("STEP 2: READING STOP ORDERS FROM IB")
         print("="*80)
         
-        orders = self.ib.openOrders()
-        
-        print(f"\nFound {len(orders)} open orders")
-        
-        for order in orders:
-            symbol = order.contract.symbol if hasattr(order.contract, 'symbol') else order.contract.localSymbol
+        try:
+            # Request open orders
+            print("\nRequesting open orders...")
+            self.ib.reqOpenOrders()
             
-            if order.orderType == 'STP':  # Stop loss order
-                stop_price = order.auxPrice
-                order_id = order.orderId
+            # Give IB time to send the data
+            import time
+            time.sleep(3)
+            
+            # Get the orders
+            orders = self.ib.openOrders()
+            
+            print(f"Found {len(orders)} open orders")
+            
+            for order in orders:
+                symbol = order.contract.symbol if hasattr(order.contract, 'symbol') else order.contract.localSymbol
                 
-                print(f"  {symbol}: Stop @ ${stop_price:.2f} (Order ID: {order_id})")
-                
-                self.stop_orders[symbol] = {
-                    'stop_price': stop_price,
-                    'order_id': order_id,
-                    'order': order
-                }
-            else:
-                print(f"  {symbol}: {order.orderType} order (not a stop)")
-        
-        if len(self.stop_orders) == 0:
-            print("\n! WARNING: No stop orders found!")
-            print("  You should have stop orders for all positions")
-            print("  Consider placing them before syncing")
-        
-        return True
+                if order.orderType == 'STP':  # Stop loss order
+                    stop_price = order.auxPrice
+                    order_id = order.orderId
+                    
+                    print(f"  {symbol}: Stop @ ${stop_price:.2f} (Order ID: {order_id})")
+                    
+                    self.stop_orders[symbol] = {
+                        'stop_price': stop_price,
+                        'order_id': order_id,
+                        'order': order
+                    }
+                else:
+                    print(f"  {symbol}: {order.orderType} order (not a stop)")
+            
+            if len(self.stop_orders) == 0:
+                print("\n! WARNING: No stop orders found!")
+                print("  You should have stop orders for all positions")
+                print("  The system will use backtest-calculated stops instead")
+            
+            return True
+            
+        except Exception as e:
+            print(f"\n! ERROR fetching stop orders: {e}")
+            print("  Will use backtest-calculated stops")
+            return True  # Don't fail - we can still proceed without stops
     
     def get_expected_positions(self):
         """Get expected positions from backtest"""
@@ -191,7 +216,7 @@ class ManualPositionSync:
             symbol = pos.contract.symbol if hasattr(pos.contract, 'symbol') else pos.contract.localSymbol
             contract_type = pos.contract.secType
             quantity = abs(pos.position)
-            avg_cost = pos.avgCost
+            avg_cost = pos.avgCost if hasattr(pos, 'avgCost') else 0.0
             
             # Skip ignored tickers (discretionary positions)
             if symbol in IGNORE_TICKERS:
@@ -248,10 +273,10 @@ class ManualPositionSync:
                 warnings.append(f"{symbol}: Not in expected positions from backtest")
                 print(f"  ! Not in expected backtest positions")
             
-            # Create position entry
+            # Create position entry (use 'shares' to match position_manager format)
             position_state['positions'][symbol] = {
-                'quantity': quantity,
-                'entry_price': avg_cost,
+                'shares': int(quantity),  # Ensure integer
+                'entry_price': avg_cost if avg_cost > 0 else 0.0,
                 'stop_price': stop_price,
                 'stop_order_id': stop_order_id,
                 'manually_entered': True
@@ -288,7 +313,7 @@ class ManualPositionSync:
         
         for ticker, info in position_state['positions'].items():
             print(f"\n{ticker}:")
-            print(f"  Quantity: {info['quantity']:.2f}")
+            print(f"  Quantity: {info['shares']:.0f} shares")
             print(f"  Entry: ${info['entry_price']:.2f}")
             if info.get('stop_price'):
                 print(f"  Stop: ${info['stop_price']:.2f}")
