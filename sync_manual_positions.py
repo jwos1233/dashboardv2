@@ -78,14 +78,18 @@ class ManualPositionSync:
             symbol = pos.contract.symbol if hasattr(pos.contract, 'symbol') else pos.contract.localSymbol
             quantity = pos.position
             avg_cost = pos.avgCost
-            market_value = pos.marketValue
-            unrealized_pnl = pos.unrealizedPNL
+            
+            # These may not be available in readonly mode
+            market_value = getattr(pos, 'marketValue', None)
+            unrealized_pnl = getattr(pos, 'unrealizedPNL', None)
             
             print(f"  {symbol}:")
             print(f"    Quantity: {quantity:.2f}")
             print(f"    Avg Cost: ${avg_cost:.2f}")
-            print(f"    Market Value: ${market_value:,.2f}")
-            print(f"    Unrealized P&L: ${unrealized_pnl:,.2f}")
+            if market_value is not None:
+                print(f"    Market Value: ${market_value:,.2f}")
+            if unrealized_pnl is not None:
+                print(f"    Unrealized P&L: ${unrealized_pnl:,.2f}")
         
         return True
     
