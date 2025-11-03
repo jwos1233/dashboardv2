@@ -161,10 +161,11 @@ QUAD_ALLOCATIONS = {
         'LQD': 0.10 * 0.50,      # 50% of 10% Bonds
     },
     'Q2': {
-        'XLE': 0.35 * 0.25,      # 25% of 35% Commodities
-        'DBC': 0.35 * 0.25,      # 25% of 35% Commodities
-        'CPER': 0.35 * 0.25,     # 25% of 35% Commodities
-        'GCC': 0.35 * 0.25,      # 25% of 35% Commodities
+        'XLE': 0.35 * 0.20,      # 20% of 35% Commodities
+        'DBC': 0.35 * 0.20,      # 20% of 35% Commodities
+        'CPER': 0.35 * 0.20,     # 20% of 35% Commodities (Copper)
+        'COPX': 0.35 * 0.20,     # 20% of 35% Commodities (Copper Miners)
+        'GCC': 0.35 * 0.20,      # 20% of 35% Commodities
         'XLF': 0.30 * 0.333,     # 33% of 30% Cyclicals
         'XLI': 0.30 * 0.333,     # 33% of 30% Cyclicals
         'XLB': 0.30 * 0.334,     # 34% of 30% Cyclicals
@@ -180,12 +181,13 @@ QUAD_ALLOCATIONS = {
         'FCG': 0.25 * 0.333,     # 33% of 25% Energy
         'XLE': 0.25 * 0.333,     # 33% of 25% Energy
         'XOP': 0.25 * 0.334,     # 34% of 25% Energy
-        'GLD': 0.30 * 0.167,     # 16.7% of 30% Commodities
-        'DBC': 0.30 * 0.167,     # 16.7% of 30% Commodities
-        'CPER': 0.30 * 0.167,    # 16.7% of 30% Commodities
-        'DBA': 0.30 * 0.167,     # 16.7% of 30% Commodities
-        'REMX': 0.30 * 0.167,    # 16.7% of 30% Commodities
-        'URA': 0.30 * 0.165,     # 16.5% of 30% Commodities (Uranium)
+        'GLD': 0.30 * 0.143,     # 14.3% of 30% Commodities
+        'DBC': 0.30 * 0.143,     # 14.3% of 30% Commodities
+        'CPER': 0.30 * 0.143,    # 14.3% of 30% Commodities (Copper)
+        'COPX': 0.30 * 0.143,    # 14.3% of 30% Commodities (Copper Miners)
+        'DBA': 0.30 * 0.143,     # 14.3% of 30% Commodities
+        'REMX': 0.30 * 0.143,    # 14.3% of 30% Commodities
+        'URA': 0.30 * 0.142,     # 14.2% of 30% Commodities (Uranium)
         'TIP': 0.20 * 0.50,      # 50% of 20% TIPS
         'VTIP': 0.20 * 0.50,     # 50% of 20% TIPS
         'VNQ': 0.10 * 0.50,      # 50% of 10% Real Assets

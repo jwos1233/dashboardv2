@@ -21,6 +21,14 @@ import json
 from datetime import datetime
 from typing import Dict, List
 
+# Load ignore list and contract type filters
+try:
+    from strategy_config import IGNORE_TICKERS, MANAGED_CONTRACT_TYPES, IGNORED_CONTRACT_TYPES
+except ImportError:
+    IGNORE_TICKERS = []
+    MANAGED_CONTRACT_TYPES = ['STK', 'CFD']
+    IGNORED_CONTRACT_TYPES = ['OPT', 'FUT', 'FOP', 'WAR', 'IOPT']
+
 
 class ManualPositionSync:
     """Sync manually entered positions with position tracking system"""
@@ -37,10 +45,12 @@ class ManualPositionSync:
         print(f"\nConnecting to IB on port {self.ib_port}...")
         
         self.ib = IB()
+        self.ib.RequestTimeout = 60  # Increase timeout for slower connections
         
         try:
-            self.ib.connect('127.0.0.1', self.ib_port, clientId=1)
-            print("+ Connected to IB")
+            # Use readonly=True to avoid timeout issues with executions
+            self.ib.connect('127.0.0.1', self.ib_port, clientId=1, readonly=True)
+            print("+ Connected to IB (readonly mode)")
             return True
         except Exception as e:
             print(f"- Failed to connect: {e}")
@@ -175,10 +185,25 @@ class ManualPositionSync:
         
         for pos in self.positions:
             symbol = pos.contract.symbol if hasattr(pos.contract, 'symbol') else pos.contract.localSymbol
+            contract_type = pos.contract.secType
             quantity = abs(pos.position)
             avg_cost = pos.avgCost
             
-            print(f"\nProcessing {symbol}...")
+            # Skip ignored tickers (discretionary positions)
+            if symbol in IGNORE_TICKERS:
+                print(f"\n⏭️ Skipping {symbol} (discretionary position - not managed by strategy)")
+                continue
+            
+            # Skip non-managed contract types (options, futures, etc.)
+            if contract_type in IGNORED_CONTRACT_TYPES:
+                print(f"\n⏭️ Skipping {symbol} ({contract_type} position - strategy only manages {', '.join(MANAGED_CONTRACT_TYPES)})")
+                continue
+            
+            if contract_type not in MANAGED_CONTRACT_TYPES:
+                print(f"\n⏭️ Skipping {symbol} ({contract_type} position - strategy only manages {', '.join(MANAGED_CONTRACT_TYPES)})")
+                continue
+            
+            print(f"\n✅ Processing {symbol} ({contract_type})...")
             
             # Get stop order from IB
             stop_price = None

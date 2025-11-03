@@ -133,15 +133,16 @@ class PositionManager:
             actual_entry_price = entry_trade.orderStatus.avgFillPrice
             print(f"  ✓ Filled: {quantity} {ticker} @ ${actual_entry_price:.2f}")
             
-            # 2. Place stop order
+            # 2. Place stop order (GTC = Good-Till-Cancelled)
             stop_order = Order()
             stop_order.action = 'SELL'
             stop_order.orderType = 'STP'
             stop_order.auxPrice = stop_price
             stop_order.totalQuantity = quantity
+            stop_order.tif = 'GTC'  # Good-Till-Cancelled (doesn't expire daily)
             stop_order.transmit = True
             
-            print(f"  🛑 Placing STOP: Sell {quantity} {ticker} @ ${stop_price:.2f}")
+            print(f"  🛑 Placing STOP: Sell {quantity} {ticker} @ ${stop_price:.2f} (GTC)")
             stop_trade = self.ib.placeOrder(contract, stop_order)
             
             # 3. Save state
@@ -256,9 +257,10 @@ class PositionManager:
             new_stop_order.orderType = 'STP'
             new_stop_order.auxPrice = original_stop_price  # SAME stop price!
             new_stop_order.totalQuantity = new_quantity
+            new_stop_order.tif = 'GTC'  # Good-Till-Cancelled (doesn't expire daily)
             new_stop_order.transmit = True
             
-            print(f"  🛑 New STOP: Sell {new_quantity} {ticker} @ ${original_stop_price:.2f} (SAME price)")
+            print(f"  🛑 New STOP: Sell {new_quantity} {ticker} @ ${original_stop_price:.2f} (GTC, SAME price)")
             new_stop_trade = self.ib.placeOrder(contract, new_stop_order)
             
             # 4. Update state with new quantity and stop order ID

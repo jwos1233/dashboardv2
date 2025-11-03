@@ -11,6 +11,14 @@ from typing import Dict, List
 from datetime import datetime
 import time
 
+# Load ignore list and contract type filters
+try:
+    from strategy_config import IGNORE_TICKERS, MANAGED_CONTRACT_TYPES, IGNORED_CONTRACT_TYPES
+except ImportError:
+    IGNORE_TICKERS = []
+    MANAGED_CONTRACT_TYPES = ['STK', 'CFD']
+    IGNORED_CONTRACT_TYPES = ['OPT', 'FUT', 'FOP', 'WAR', 'IOPT']
+
 
 class IBExecutor:
     """Execute trades via Interactive Brokers API using CFDs"""
@@ -113,7 +121,11 @@ class IBExecutor:
     
     def get_current_positions(self) -> Dict[str, float]:
         """
-        Get current positions
+        Get current positions (only strategy-managed positions)
+        
+        Filters out:
+        - Discretionary positions (IGNORE_TICKERS)
+        - Non-managed contract types (options, futures, etc.)
         
         Returns:
             Dict of {ticker: quantity}
@@ -123,9 +135,25 @@ class IBExecutor:
         
         positions = {}
         for position in self.ib.positions():
-            if isinstance(position.contract, CFD):
-                symbol = position.contract.symbol
-                positions[symbol] = position.position
+            symbol = position.contract.symbol if hasattr(position.contract, 'symbol') else position.contract.localSymbol
+            contract_type = position.contract.secType
+            quantity = position.position
+            
+            # Skip zero positions
+            if quantity == 0:
+                continue
+            
+            # Skip ignored tickers (discretionary positions)
+            if symbol in IGNORE_TICKERS:
+                continue
+            
+            # Skip non-managed contract types (options, futures, etc.)
+            if contract_type in IGNORED_CONTRACT_TYPES:
+                continue
+            
+            # Only include managed contract types
+            if contract_type in MANAGED_CONTRACT_TYPES:
+                positions[symbol] = quantity
         
         return positions
     
@@ -168,13 +196,13 @@ class IBExecutor:
             print(f"Error getting price for {contract.symbol}: {e}")
             return None
     
-    def place_order(self, contract: CFD, quantity: float, action: str = 'BUY') -> Order:
+    def place_order(self, contract: CFD, quantity: int, action: str = 'BUY') -> Order:
         """
         Place a market order
         
         Args:
             contract: CFD contract
-            quantity: Number of contracts (can be fractional for CFDs)
+            quantity: Number of contracts (MUST be integer - no fractional quantities)
             action: 'BUY' or 'SELL'
         
         Returns:
@@ -184,13 +212,20 @@ class IBExecutor:
             print("Not connected to IB")
             return None
         
+        # Ensure quantity is integer (no decimals allowed)
+        quantity = int(round(quantity))
+        
+        if quantity == 0:
+            print(f"  ⊘ Quantity rounds to 0, skipping order")
+            return None
+        
         # Create market order
         order = MarketOrder(action, quantity)
         
         # Place order
         trade = self.ib.placeOrder(contract, order)
         
-        print(f"  → {action} {quantity:.4f} {contract.symbol} CFD")
+        print(f"  → {action} {quantity} {contract.symbol} (integer qty)")
         
         return trade
     
@@ -242,54 +277,70 @@ class IBExecutor:
         # Close positions not in target (with position manager handling)
         for ticker in list(ib_positions.keys()):
             if ticker not in target_sizes:
-                print(f"\n  Closing {ticker}...")
-                contract = self.create_cfd_contract(ticker)
-                if contract and position_manager:
-                    # Use position manager to handle exit (cancels stops)
-                    success = position_manager.exit_position(
-                        contract, 
-                        reason='QUAD_CHANGE'
-                    )
-                    if success:
-                        executed_trades.append(ticker)
-                elif contract:
-                    # Fallback: direct order without position manager
-                    quantity = abs(ib_positions[ticker])
-                    action = 'SELL' if ib_positions[ticker] > 0 else 'BUY'
-                    trade = self.place_order(contract, quantity, action)
-                    executed_trades.append(trade)
+                try:
+                    print(f"\n  Closing {ticker}...")
+                    contract = self.create_cfd_contract(ticker)
+                    if contract and position_manager:
+                        # Use position manager to handle exit (cancels stops)
+                        success = position_manager.exit_position(
+                            contract, 
+                            reason='QUAD_CHANGE'
+                        )
+                        if success:
+                            executed_trades.append(ticker)
+                    elif contract:
+                        # Fallback: direct order without position manager
+                        quantity = int(abs(ib_positions[ticker]))
+                        action = 'SELL' if ib_positions[ticker] > 0 else 'BUY'
+                        trade = self.place_order(contract, quantity, action)
+                        if trade:
+                            executed_trades.append(trade)
+                except Exception as e:
+                    # If closing this position fails, log it and continue with others
+                    print(f"    ✗ ERROR closing {ticker}: {e}")
+                    print(f"    ⏭️ Continuing with other positions...")
+                    continue
         
         # Open/adjust positions in target
         for ticker, target_notional in target_sizes.items():
-            print(f"\n  Adjusting {ticker}...")
-            contract = self.create_cfd_contract(ticker)
+            try:
+                print(f"\n  Adjusting {ticker}...")
+                contract = self.create_cfd_contract(ticker)
+                
+                if not contract:
+                    print(f"    ✗ Could not create contract for {ticker} - skipping")
+                    continue
+                
+                # Get current price
+                price = self.get_market_price(contract)
+                if not price:
+                    print(f"    ✗ Could not get price for {ticker} - skipping")
+                    continue
+                
+                # Calculate target quantity (MUST be integer - no fractional shares)
+                target_quantity = int(round(target_notional / price))
+                
+                # Calculate current quantity
+                current_quantity = int(ib_positions.get(ticker, 0))
+                
+                # Calculate delta (integer)
+                delta_quantity = int(target_quantity - current_quantity)
+                
+                # Only trade if delta > threshold (e.g., 5% of target) AND delta >= 1 share
+                if abs(delta_quantity) >= 1 and abs(delta_quantity) > abs(target_quantity) * 0.05:
+                    action = 'BUY' if delta_quantity > 0 else 'SELL'
+                    # Ensure integer quantity
+                    trade = self.place_order(contract, int(abs(delta_quantity)), action)
+                    if trade:
+                        executed_trades.append(trade)
+                else:
+                    print(f"    ⊘ Position close to target, no trade needed")
             
-            if not contract:
-                print(f"    ✗ Could not create contract for {ticker}")
+            except Exception as e:
+                # If any ticker fails (e.g., CPER restricted), log it and continue with others
+                print(f"    ✗ ERROR with {ticker}: {e}")
+                print(f"    ⏭️ Continuing with other positions...")
                 continue
-            
-            # Get current price
-            price = self.get_market_price(contract)
-            if not price:
-                print(f"    ✗ Could not get price for {ticker}")
-                continue
-            
-            # Calculate target quantity
-            target_quantity = target_notional / price
-            
-            # Calculate current quantity
-            current_quantity = current_positions.get(ticker, 0)
-            
-            # Calculate delta
-            delta_quantity = target_quantity - current_quantity
-            
-            # Only trade if delta > threshold (e.g., 5% of target)
-            if abs(delta_quantity) > abs(target_quantity) * 0.05:
-                action = 'BUY' if delta_quantity > 0 else 'SELL'
-                trade = self.place_order(contract, abs(delta_quantity), action)
-                executed_trades.append(trade)
-            else:
-                print(f"    ⊘ Position close to target, no trade")
         
         print(f"\n✓ Executed {len(executed_trades)} trades")
         
