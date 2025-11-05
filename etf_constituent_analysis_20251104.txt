@@ -1,0 +1,60 @@
+================================================================================
+ETF CONSTITUENT RELATIVE STRENGTH ANALYSIS
+Generated: 2025-11-04 08:39:59
+Lookback Period: 30 days
+================================================================================
+
+
+================================================================================
+ETF: ARKK
+================================================================================
+Rank   Ticker   RS Momentum     Stock Momentum  Price       
+--------------------------------------------------------------------------------
+1      TWLO            +24.32%         +34.31%  $    136.10
+2      PATH            +21.00%         +30.72%  $     15.87
+3      EXAS            +15.49%         +24.78%  $     66.98
+4      SHOP            +11.59%         +20.56%  $    172.94
+5      HOOD            +11.00%         +19.92%  $    147.08
+6      IONS             +8.26%         +16.96%  $     73.65
+7      TXG              +6.12%         +14.64%  $     13.70
+8      ROKU             +2.59%         +10.84%  $    108.63
+9      COIN             -0.28%          +7.74%  $    330.42
+10     CRSP             -4.91%          +2.74%  $     61.97
+
+================================================================================
+OVERALL TOP 20 PERFORMERS
+================================================================================
+Rank   Ticker   In ETF   RS Momentum     Stock Momentum  Price       
+--------------------------------------------------------------------------------
+1      TWLO     ARKK            +24.32%         +34.31%  $    136.10
+2      PATH     ARKK            +21.00%         +30.72%  $     15.87
+3      EXAS     ARKK            +15.49%         +24.78%  $     66.98
+4      SHOP     ARKK            +11.59%         +20.56%  $    172.94
+5      HOOD     ARKK            +11.00%         +19.92%  $    147.08
+6      IONS     ARKK             +8.26%         +16.96%  $     73.65
+7      TXG      ARKK             +6.12%         +14.64%  $     13.70
+8      ROKU     ARKK             +2.59%         +10.84%  $    108.63
+9      COIN     ARKK             -0.28%          +7.74%  $    330.42
+10     CRSP     ARKK             -4.91%          +2.74%  $     61.97
+11     ZM       ARKK             -4.91%          +2.73%  $     86.28
+12     U        ARKK            -17.46%         -10.83%  $     37.55
+13     RBLX     ARKK            -24.53%         -18.46%  $    107.66
+14     NTLA     ARKK            -27.17%         -21.31%  $     13.07
+15     DKNG     ARKK            -34.07%         -28.77%  $     30.57
+
+================================================================================
+INTERPRETATION:
+================================================================================
+RS Momentum = Relative Strength Momentum
+  - Positive: Stock outperforming its ETF
+  - Negative: Stock underperforming its ETF
+
+Stock Momentum = Absolute price momentum
+  - The stock's own price trend
+
+Use this to:
+  1. Identify leaders within your trending sectors
+  2. Consider trading individual stocks instead of ETFs
+  3. Spot sector rotation opportunities
+  4. Find high-conviction ideas for discretionary trades
+================================================================================

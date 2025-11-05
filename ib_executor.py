@@ -108,15 +108,38 @@ class IBExecutor:
             return None
     
     def get_account_value(self) -> float:
-        """Get current account net liquidation value"""
+        """Get current account net liquidation value (handles multi-currency)"""
         if not self.connected:
             print("Not connected to IB")
             return 0.0
         
+        # Try to get account summary (more reliable)
+        try:
+            account_summary = self.ib.accountSummary()
+            for item in account_summary:
+                if item.tag == 'NetLiquidation':
+                    # Prefer USD, but accept base currency (GBP, EUR, etc.)
+                    if item.currency == 'USD':
+                        return float(item.value)
+                    elif item.currency in ['GBP', 'EUR', 'BASE']:
+                        # Found base currency, return it
+                        value = float(item.value)
+                        print(f"   (Account in {item.currency}: {value:,.2f})")
+                        return value
+        except:
+            pass
+        
+        # Fallback: Try accountValues
         account_values = self.ib.accountValues()
         for item in account_values:
-            if item.tag == 'NetLiquidation' and item.currency == 'USD':
-                return float(item.value)
+            if item.tag == 'NetLiquidation':
+                if item.currency == 'USD':
+                    return float(item.value)
+                elif item.currency in ['GBP', 'EUR', 'BASE']:
+                    value = float(item.value)
+                    print(f"   (Account in {item.currency}: {value:,.2f})")
+                    return value
+        
         return 0.0
     
     def get_current_positions(self) -> Dict[str, float]:
@@ -178,22 +201,50 @@ class IBExecutor:
         return position_sizes
     
     def get_market_price(self, contract: CFD) -> float:
-        """Get current market price for a contract"""
+        """Get current market price for a contract (uses delayed/snapshot data)"""
         try:
-            ticker = self.ib.reqMktData(contract, '', False, False)
-            self.ib.sleep(2)  # Wait for market data
+            # Use delayed market data (free) - type 3
+            self.ib.reqMarketDataType(3)
             
-            if ticker.marketPrice():
+            # Request market data
+            ticker = self.ib.reqMktData(contract, '', False, False)
+            self.ib.sleep(3)  # Wait longer for market data
+            
+            # Try multiple price fields
+            price = None
+            if ticker.marketPrice() and not pd.isna(ticker.marketPrice()):
                 price = ticker.marketPrice()
-            elif ticker.close:
+            elif ticker.last and not pd.isna(ticker.last):
+                price = ticker.last
+            elif ticker.close and not pd.isna(ticker.close):
                 price = ticker.close
-            else:
-                price = None
+            elif ticker.bid and ticker.ask and not pd.isna(ticker.bid) and not pd.isna(ticker.ask):
+                price = (ticker.bid + ticker.ask) / 2
             
             self.ib.cancelMktData(contract)
-            return price
+            
+            if price is None or pd.isna(price):
+                print(f"    ⚠️ No valid price data for {contract.symbol} - using yfinance fallback")
+                # Fallback to yfinance for delayed price
+                import yfinance as yf
+                ticker_yf = yf.Ticker(contract.symbol)
+                hist = ticker_yf.history(period='1d')
+                if not hist.empty:
+                    price = hist['Close'].iloc[-1]
+            
+            return price if price and not pd.isna(price) else None
+            
         except Exception as e:
-            print(f"Error getting price for {contract.symbol}: {e}")
+            print(f"    ⚠️ Error getting price for {contract.symbol}: {e}")
+            # Try yfinance as backup
+            try:
+                import yfinance as yf
+                ticker_yf = yf.Ticker(contract.symbol)
+                hist = ticker_yf.history(period='1d')
+                if not hist.empty:
+                    return hist['Close'].iloc[-1]
+            except:
+                pass
             return None
     
     def place_order(self, contract: CFD, quantity: int, action: str = 'BUY') -> Order:
@@ -313,12 +364,22 @@ class IBExecutor:
                 
                 # Get current price
                 price = self.get_market_price(contract)
-                if not price:
-                    print(f"    ✗ Could not get price for {ticker} - skipping")
+                if not price or pd.isna(price) or price <= 0:
+                    print(f"    ✗ Could not get valid price for {ticker} - skipping")
+                    continue
+                
+                # Check if account value is valid
+                if account_value <= 0:
+                    print(f"    ✗ Invalid account value (${account_value:.2f}) - skipping")
                     continue
                 
                 # Calculate target quantity (MUST be integer - no fractional shares)
                 target_quantity = int(round(target_notional / price))
+                
+                # Safety check
+                if target_quantity <= 0:
+                    print(f"    ⊘ Target quantity is 0 - skipping")
+                    continue
                 
                 # Calculate current quantity
                 current_quantity = int(ib_positions.get(ticker, 0))
