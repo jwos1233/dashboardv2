@@ -325,34 +325,45 @@ class IBExecutor:
         
         executed_trades = []
         
-        # Close positions not in target (with position manager handling)
+        # STEP 1: Close positions not in target (with position manager handling)
         for ticker in list(ib_positions.keys()):
             if ticker not in target_sizes:
                 try:
                     print(f"\n  Closing {ticker}...")
                     contract = self.create_cfd_contract(ticker)
+                    
+                    closed = False
+                    
+                    # Try position manager first (if available and position is managed)
                     if contract and position_manager:
-                        # Use position manager to handle exit (cancels stops)
                         success = position_manager.exit_position(
                             contract, 
                             reason='QUAD_CHANGE'
                         )
                         if success:
                             executed_trades.append(ticker)
-                    elif contract:
-                        # Fallback: direct order without position manager
+                            closed = True
+                    
+                    # Fallback: direct close if position manager didn't handle it
+                    if contract and not closed:
+                        print(f"  ⚠️ Position not managed by position_manager, closing directly...")
                         quantity = int(abs(ib_positions[ticker]))
                         action = 'SELL' if ib_positions[ticker] > 0 else 'BUY'
                         trade = self.place_order(contract, quantity, action)
                         if trade:
                             executed_trades.append(trade)
+                            closed = True
+                    
+                    if not closed:
+                        print(f"    ✗ Failed to close {ticker}")
+                        
                 except Exception as e:
                     # If closing this position fails, log it and continue with others
                     print(f"    ✗ ERROR closing {ticker}: {e}")
                     print(f"    ⏭️ Continuing with other positions...")
                     continue
         
-        # Open/adjust positions in target
+        # Open/adjust positions in target (WITH STOP LOSSES!)
         for ticker, target_notional in target_sizes.items():
             try:
                 print(f"\n  Adjusting {ticker}...")
@@ -389,11 +400,50 @@ class IBExecutor:
                 
                 # Only trade if delta > threshold (e.g., 5% of target) AND delta >= 1 share
                 if abs(delta_quantity) >= 1 and abs(delta_quantity) > abs(target_quantity) * 0.05:
-                    action = 'BUY' if delta_quantity > 0 else 'SELL'
-                    # Ensure integer quantity
-                    trade = self.place_order(contract, int(abs(delta_quantity)), action)
-                    if trade:
-                        executed_trades.append(trade)
+                    
+                    # Case 1: NEW POSITION - use position_manager.enter_position (places stop!)
+                    if current_quantity == 0 and position_manager and atr_data and ticker in atr_data:
+                        atr = atr_data[ticker]
+                        stop_price = price - (2.0 * atr)  # 2 ATR stop
+                        
+                        print(f"    📈 NEW POSITION - Entry with stop loss")
+                        print(f"    🛑 Stop: ${stop_price:.2f} (2.0 ATR = ${atr:.2f})")
+                        
+                        success = position_manager.enter_position(
+                            contract=contract,
+                            quantity=target_quantity,
+                            entry_price=price,
+                            stop_price=stop_price,
+                            atr=atr
+                        )
+                        
+                        if success:
+                            print(f"    ✓ Position entered with stop loss placed")
+                        else:
+                            print(f"    ✗ Failed to enter position via manager")
+                    
+                    # Case 2: ADJUSTING EXISTING - use position_manager.adjust_position (keeps stop!)
+                    elif current_quantity != 0 and position_manager and position_manager.has_position(ticker):
+                        print(f"    🔄 ADJUSTING POSITION - Keeping original stop")
+                        
+                        success = position_manager.adjust_position(
+                            contract=contract,
+                            new_quantity=target_quantity
+                        )
+                        
+                        if success:
+                            print(f"    ✓ Position adjusted, stop updated for new size")
+                        else:
+                            print(f"    ✗ Failed to adjust position via manager")
+                    
+                    # Case 3: FALLBACK - direct order (no stop management)
+                    else:
+                        print(f"    ⚠️ No position manager or ATR data - trading without stop")
+                        action = 'BUY' if delta_quantity > 0 else 'SELL'
+                        trade = self.place_order(contract, int(abs(delta_quantity)), action)
+                        if trade:
+                            executed_trades.append(trade)
+                
                 else:
                     print(f"    ⊘ Position close to target, no trade needed")
             

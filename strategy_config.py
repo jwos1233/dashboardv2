@@ -19,3 +19,5 @@ MANAGED_CONTRACT_TYPES = ['STK', 'CFD']
 # Contract types to ignore (options, futures, etc.)
 IGNORED_CONTRACT_TYPES = ['OPT', 'FUT', 'FOP', 'WAR', 'IOPT']
 
+
+

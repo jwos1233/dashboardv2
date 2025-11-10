@@ -230,12 +230,21 @@ class SimpleLiveTrader:
             print("STEP 3: EXECUTION VIA INTERACTIVE BROKERS")
             print("="*70)
             
-            # Get ATR data for stops
-            atr_data = {}
-            if hasattr(self.signal_gen, 'atr_data') and self.signal_gen.atr_data is not None:
-                for ticker in confirmed_weights.keys():
-                    if ticker in self.signal_gen.atr_data.columns:
-                        atr_data[ticker] = float(self.signal_gen.atr_data[ticker].iloc[-1])
+            # Get ATR data for stops (from signals dict, not signal_gen attribute)
+            atr_data = signals.get('atr_data', {})
+            
+            # Filter to only confirmed tickers
+            atr_data = {ticker: atr for ticker, atr in atr_data.items() 
+                       if ticker in confirmed_weights}
+            
+            print(f"\n📐 ATR Data for stops: {len(atr_data)} tickers")
+            if atr_data:
+                for ticker, atr in list(atr_data.items())[:3]:  # Show first 3
+                    print(f"  {ticker}: ${atr:.2f}")
+                if len(atr_data) > 3:
+                    print(f"  ... and {len(atr_data) - 3} more")
+            else:
+                print("  ⚠️ WARNING: No ATR data available - stops will NOT be placed!")
             
             with IBExecutor(port=self.ib_port) as ib_exec:
                 if not ib_exec.connected:
@@ -448,4 +457,5 @@ This matches the backtest logic exactly:
 
 if __name__ == "__main__":
     main()
+
 

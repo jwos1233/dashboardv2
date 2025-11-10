@@ -1,0 +1,57 @@
+======================================================================
+EXECUTION LOG - 2025-11-06 22:20:37
+======================================================================
+
+Account Value: $38,954.72
+Mode: LIVE TRADING
+
+CONFIRMATION RESULTS:
+----------------------------------------------------------------------
+Confirmed: 10
+Rejected: 0
+
+Confirmed entries:
+  XLV: 18.93%
+  VGLT: 15.06%
+  COPX: 11.38%
+  GLD: 8.43%
+  IEF: 7.89%
+  CPER: 7.11%
+  PAVE: 4.65%
+  XLE: 4.31%
+  DBC: 3.70%
+  MUB: 3.56%
+
+======================================================================
+TRADES EXECUTED:
+======================================================================
+1. Trade(contract=CFD(conId=134770358, symbol='XLE', exchange='SMART', currency='USD', localSymbol='XLE', tradingClass='XLE'), order=MarketOrder(orderId=6, clientId=1, permId=908255483, action='BUY', totalQuantity=19.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=6, status='Inactive', filled=0.0, remaining=19.0, avgFillPrice=0.0, permId=908255483, parentId=0, lastFillPrice=0.0, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 5, 246150, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 5, 813447, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 5, 813889, tzinfo=datetime.timezone.utc), status='Cancelled', message='Error 201, reqId 6: Order rejected - reason:STK IB CFD received outside RTH', errorCode=201), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 5, 814527, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0)], advancedError='')
+2. Trade(contract=CFD(conId=134771924, symbol='GLD', exchange='SMART', currency='USD', localSymbol='GLD', tradingClass='GLD'), order=MarketOrder(orderId=9, clientId=1, permId=908255484, action='BUY', totalQuantity=4.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=9, status='Inactive', filled=0.0, remaining=4.0, avgFillPrice=0.0, permId=908255484, parentId=0, lastFillPrice=0.0, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 8, 982270, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 9, 113268, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 9, 113639, tzinfo=datetime.timezone.utc), status='Cancelled', message='Error 201, reqId 9: Order rejected - reason:STK IB CFD received outside RTH', errorCode=201), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 9, 114271, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0)], advancedError='')
+3. Trade(contract=CFD(conId=134771254, symbol='DBC', exchange='SMART', currency='USD', localSymbol='DBC', tradingClass='DBC'), order=MarketOrder(orderId=12, clientId=1, permId=908255485, action='BUY', totalQuantity=59.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=12, status='Inactive', filled=0.0, remaining=59.0, avgFillPrice=0.0, permId=908255485, parentId=0, lastFillPrice=0.0, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 12, 313809, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 12, 446001, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 12, 447356, tzinfo=datetime.timezone.utc), status='Cancelled', message='Error 201, reqId 12: Order rejected - reason:STK IB CFD received outside RTH', errorCode=201), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 12, 448954, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0)], advancedError='')
+4. Trade(contract=CFD(conId=499901430, symbol='CPER', exchange='SMART', currency='USD', localSymbol='CPER', tradingClass='CPER'), order=MarketOrder(orderId=15, clientId=1, permId=908255486, action='BUY', totalQuantity=90.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=15, status='Inactive', filled=0.0, remaining=90.0, avgFillPrice=0.0, permId=908255486, parentId=0, lastFillPrice=0.0, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 15, 874295, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 16, 8176, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 16, 8544, tzinfo=datetime.timezone.utc), status='Cancelled', message='Error 201, reqId 15: Order rejected - reason:STK IB CFD received outside RTH', errorCode=201), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 16, 9168, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0)], advancedError='')
+5. Trade(contract=CFD(conId=481698423, symbol='PAVE', exchange='SMART', currency='USD', localSymbol='PAVE', tradingClass='PAVE'), order=MarketOrder(orderId=20, clientId=1, permId=908255487, action='SELL', totalQuantity=22.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=20, status='Inactive', filled=0.0, remaining=22.0, avgFillPrice=0.0, permId=908255487, parentId=0, lastFillPrice=0.0, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 22, 713252, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 22, 845184, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 22, 845585, tzinfo=datetime.timezone.utc), status='Cancelled', message='Error 201, reqId 20: Order rejected - reason:STK IB CFD received outside RTH', errorCode=201), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 22, 846248, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0)], advancedError='')
+6. Trade(contract=CFD(conId=290655967, symbol='VGLT', exchange='SMART', currency='USD', localSymbol='VGLTn', tradingClass='VGLT'), order=MarketOrder(orderId=25, clientId=1, permId=908255488, action='BUY', totalQuantity=103.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=25, status='Inactive', filled=0.0, remaining=103.0, avgFillPrice=0.0, permId=908255488, parentId=0, lastFillPrice=0.0, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 29, 775750, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 29, 915856, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 29, 940301, tzinfo=datetime.timezone.utc), status='Cancelled', message='Error 201, reqId 25: Order rejected - reason:STK IB CFD received outside RTH', errorCode=201), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 29, 942298, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0)], advancedError='')
+7. Trade(contract=CFD(conId=134770775, symbol='IEF', exchange='SMART', currency='USD', localSymbol='IEFn', tradingClass='IEF'), order=MarketOrder(orderId=28, clientId=1, permId=908255489, action='BUY', totalQuantity=32.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=28, status='Inactive', filled=0.0, remaining=32.0, avgFillPrice=0.0, permId=908255489, parentId=0, lastFillPrice=0.0, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 33, 544321, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 33, 678676, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 33, 681764, tzinfo=datetime.timezone.utc), status='Cancelled', message='Error 201, reqId 28: Order rejected - reason:STK IB CFD received outside RTH', errorCode=201), TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 33, 682480, tzinfo=datetime.timezone.utc), status='Inactive', message='', errorCode=0)], advancedError='')
+8. Trade(contract=CFD(conId=134771695, symbol='MUB', exchange='SMART', currency='USD', localSymbol='MUB', tradingClass='MUB'), order=MarketOrder(orderId=31, clientId=1, action='SELL', totalQuantity=2), orderStatus=OrderStatus(orderId=31, status='PendingSubmit', filled=0.0, remaining=0.0, avgFillPrice=0.0, permId=0, parentId=0, lastFillPrice=0.0, clientId=0, whyHeld='', mktCapPrice=0.0), fills=[], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 6, 22, 20, 37, 8761, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0)], advancedError='')
+
+======================================================================
+POSITIONS:
+======================================================================
+
+Before:
+  COPX: 74
+  DBC: 4
+  GLD: 5
+  MUB: 15
+  PAVE: 60
+  XLV: 50
+
+After:
+  COPX: 74
+  DBC: 4
+  GLD: 5
+  MUB: 15
+  PAVE: 60
+  XLV: 50
+
+======================================================================
