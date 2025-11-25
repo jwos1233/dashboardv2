@@ -365,3 +365,5 @@ From backtests, stops hit **15-25%** of the time:
 
 **Status:** ✅ FIXED - ATR data now passed correctly, stops will be placed on all future entries
 
+
+

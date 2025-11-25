@@ -52,7 +52,7 @@ POSITION_SIZE_PCT = 0.20  # 20% of account value per position
 MAX_DRAWDOWN_PCT = 0.15  # 15% maximum drawdown before stopping
 
 # Technical indicators
-MOMENTUM_LOOKBACK_DAYS = 50  # 50-day momentum for quadrant calculation
+MOMENTUM_LOOKBACK_DAYS = 20  # 20-day momentum for quadrant calculation
 EMA_PERIOD = 50  # 50-day EMA filter
 MIN_EMA_FILTER = True  # Whether to use EMA filter
 
@@ -163,9 +163,11 @@ QUAD_ALLOCATIONS = {
     'Q2': {
         'XLE': 0.35 * 0.20,      # 20% of 35% Commodities
         'DBC': 0.35 * 0.20,      # 20% of 35% Commodities
-        'CPER': 0.35 * 0.20,     # 20% of 35% Commodities (Copper)
-        'COPX': 0.35 * 0.20,     # 20% of 35% Commodities (Copper Miners)
         'GCC': 0.35 * 0.20,      # 20% of 35% Commodities
+        'LIT': 0.35 * 0.10,      # 10% of 35% Commodities (Lithium)
+        'AA':  0.35 * 0.10,      # 10% of 35% Commodities (Alcoa)
+        'PALL': 0.35 * 0.10,     # 10% of 35% Commodities (Palladium)
+        'VALT': 0.35 * 0.10,     # 10% of 35% Commodities (Treasury collateral)
         'XLF': 0.30 * 0.333,     # 33% of 30% Cyclicals
         'XLI': 0.30 * 0.333,     # 33% of 30% Cyclicals
         'XLB': 0.30 * 0.334,     # 34% of 30% Cyclicals
@@ -181,13 +183,15 @@ QUAD_ALLOCATIONS = {
         'FCG': 0.25 * 0.333,     # 33% of 25% Energy
         'XLE': 0.25 * 0.333,     # 33% of 25% Energy
         'XOP': 0.25 * 0.334,     # 34% of 25% Energy
-        'GLD': 0.30 * 0.143,     # 14.3% of 30% Commodities
-        'DBC': 0.30 * 0.143,     # 14.3% of 30% Commodities
-        'CPER': 0.30 * 0.143,    # 14.3% of 30% Commodities (Copper)
-        'COPX': 0.30 * 0.143,    # 14.3% of 30% Commodities (Copper Miners)
-        'DBA': 0.30 * 0.143,     # 14.3% of 30% Commodities
-        'REMX': 0.30 * 0.143,    # 14.3% of 30% Commodities
-        'URA': 0.30 * 0.142,     # 14.2% of 30% Commodities (Uranium)
+        'GLD': 0.30 * 0.12,      # 12% of 30% Commodities
+        'DBC': 0.30 * 0.12,      # 12% of 30% Commodities
+        'DBA': 0.30 * 0.12,      # 12% of 30% Commodities
+        'REMX': 0.30 * 0.12,     # 12% of 30% Commodities
+        'URA': 0.30 * 0.12,      # 12% of 30% Commodities (Uranium)
+        'LIT': 0.30 * 0.10,      # 10% of 30% Commodities (Lithium)
+        'AA':  0.30 * 0.10,      # 10% of 30% Commodities (Alcoa)
+        'PALL': 0.30 * 0.10,     # 10% of 30% Commodities (Palladium)
+        'VALT': 0.30 * 0.10,     # 10% of 30% Commodities (Treasury collateral)
         'TIP': 0.20 * 0.50,      # 50% of 20% TIPS
         'VTIP': 0.20 * 0.50,     # 50% of 20% TIPS
         'VNQ': 0.10 * 0.50,      # 50% of 10% Real Assets
@@ -200,9 +204,9 @@ QUAD_ALLOCATIONS = {
         'IEF': 0.50 * 0.50,      # 50% of 50% Long Duration
         'LQD': 0.20 * 0.50,      # 50% of 20% IG Credit
         'MUB': 0.20 * 0.50,      # 50% of 20% IG Credit
-        'XLU': 0.15 * 0.333,     # 33% of 15% Defensive
-        'XLP': 0.15 * 0.333,     # 33% of 15% Defensive
-        'XLV': 0.15 * 0.334,     # 34% of 15% Defensive
+        'XLU': 0.15 * 0.25,     # 25% of 15% Defensive
+        'XLP': 0.15 * 0.25,     # 25% of 15% Defensive
+        'XLV': 0.15 * 0.25,     # 25% of 15% Defensive
         # Cash allocation (15%) represented as staying in cash - no ticker
     }
 }
@@ -210,7 +214,7 @@ QUAD_ALLOCATIONS = {
 # Quadrant indicator assets (for scoring)
 QUAD_INDICATORS = {
     'Q1': ['QQQ', 'VUG', 'IWM', 'BTC-USD'],
-    'Q2': ['XLE', 'DBC'],
-    'Q3': ['GLD', 'LIT'],
+    'Q2': ['XLE', 'DBC', 'GCC', 'LIT'],
+    'Q3': ['GLD', 'DBC', 'DBA', 'REMX', 'URA', 'LIT'],
     'Q4': ['TLT', 'XLU', 'VIXY']
 } 

@@ -11,6 +11,7 @@ Matches backtest logic exactly without the complexity of two-step process.
 
 Usage:
     # Dry run (see what it would do)
+    
     python live_trader_simple.py --port 4001
     
     # Live execution
@@ -42,7 +43,7 @@ class SimpleLiveTrader:
             enable_telegram: Send notifications
         """
         self.signal_gen = SignalGenerator(
-            momentum_days=50, 
+            momentum_days=20, 
             ema_period=50, 
             vol_lookback=30, 
             max_positions=10,

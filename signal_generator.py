@@ -31,7 +31,7 @@ QUAD_INDICATORS = {
 class SignalGenerator:
     """Generate live trading signals for macro quadrant rotation strategy"""
     
-    def __init__(self, momentum_days=50, ema_period=50, vol_lookback=30, max_positions=10,
+    def __init__(self, momentum_days=20, ema_period=50, vol_lookback=30, max_positions=10,
                  atr_stop_loss=2.0, atr_period=14):
         self.momentum_days = momentum_days
         self.ema_period = ema_period

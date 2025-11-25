@@ -15,6 +15,7 @@ print("="*70)
 print("PRODUCTION v3.0: TOP 10 + ATR 2.0x STOP LOSS")
 print("="*70)
 print(f"Initial Capital: ${INITIAL_CAPITAL:,}")
+print(f"Momentum Lookback: 20 days")
 print(f"Max Positions: 10")
 print(f"Stop Loss: 2.0x ATR (14-day)")
 print(f"Period: ~{BACKTEST_YEARS} years")
@@ -26,6 +27,7 @@ backtest = QuadrantPortfolioBacktest(
     start_date=start_date,
     end_date=end_date,
     initial_capital=INITIAL_CAPITAL,
+    momentum_days=20,
     max_positions=10,
     atr_stop_loss=2.0,
     atr_period=14
@@ -43,6 +45,7 @@ print(f"Sharpe Ratio:      {results['sharpe']:.2f}")
 print(f"Max Drawdown:      {results['max_drawdown']:.2f}%")
 print(f"Volatility:        {results['annual_vol']:.2f}%")
 print(f"Final Value:       ${results['final_value']:,.2f}")
+
 print("="*70)
 
 # Show comparison to buy & hold SPY

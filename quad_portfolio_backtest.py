@@ -10,7 +10,7 @@ Key Features:
 - 30-day volatility lookback (optimal for responsiveness vs stability)
 - 50-day EMA trend filter (only allocate to assets above EMA)
 - Event-driven rebalancing (quad change or EMA crossover)
-- ASYMMETRIC leverage: Q1=150%, Q2/Q3/Q4=100% (moderate overweight to best quad)
+- UNIFORM leverage: All quads get 150% (1.5x) exposure
 - ENTRY CONFIRMATION: 1-day lag using CURRENT/TODAY's EMA (not lagged)
 - 5% MINIMUM DELTA: Only rebalance if position changes > 5%
 - REALISTIC EXECUTION: Trade at next day's open (accounts for gap risk)
@@ -40,6 +40,14 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from config import QUAD_ALLOCATIONS, QUADRANT_DESCRIPTIONS
 
+# Backtest leverage controls
+BASE_QUAD_LEVERAGE = 1.5       # 1.5x exposure for all quads
+Q1_LEVERAGE_MULTIPLIER = 1.0   # Q1 gets same as base (1.5x) - no extra boost
+
+# Manual overrides for assets that must be fetched even if not in current
+# allocation map (keeps backtests aligned with latest production universe).
+ADDITIONAL_BACKTEST_TICKERS = ['LIT', 'AA', 'PALL', 'VALT']
+
 class QuadrantPortfolioBacktest:
     def __init__(self, start_date, end_date, initial_capital=50000, 
                  momentum_days=50, ema_period=50, vol_lookback=30, max_positions=None,
@@ -67,6 +75,7 @@ class QuadrantPortfolioBacktest:
         all_tickers = []
         for quad_assets in QUAD_ALLOCATIONS.values():
             all_tickers.extend(quad_assets.keys())
+        all_tickers.extend(ADDITIONAL_BACKTEST_TICKERS)
         all_tickers = sorted(set(all_tickers))
         
         print(f"Fetching data for {len(all_tickers)} tickers...")
@@ -184,11 +193,11 @@ class QuadrantPortfolioBacktest:
             # Process each quad separately with volatility weighting
             final_weights = {}
             
-            # ASYMMETRIC LEVERAGE: Q1 gets 1.5x allocation, all others get 1x
-            quad1_weight = 1.5 if top1 == 'Q1' else 1.0
-            quad2_weight = 1.5 if top2 == 'Q1' else 1.0
-            
-            for quad, quad_weight in [(top1, quad1_weight), (top2, quad2_weight)]:
+            # UNIFORM LEVERAGE: 1.5x base exposure for all quads
+            for quad in (top1, top2):
+                quad_weight = BASE_QUAD_LEVERAGE
+                if quad == 'Q1':
+                    quad_weight *= Q1_LEVERAGE_MULTIPLIER
                     
                 # Get tickers for this quad
                 quad_tickers = [t for t in QUAD_ALLOCATIONS[quad].keys() 
@@ -212,7 +221,7 @@ class QuadrantPortfolioBacktest:
                 direct_vols = {t: v for t, v in quad_vols.items()}
                 total_vol = sum(direct_vols.values())
                 
-                # Normalize to quad_weight (Q1=1.5, others=1.0)
+                # Normalize to quad_weight (Q1=3x, others=2x)
                 vol_weights = {t: (v / total_vol) * quad_weight 
                              for t, v in direct_vols.items()}
                 
@@ -716,7 +725,7 @@ if __name__ == "__main__":
     print(f"EMA Trend Filter: {EMA_PERIOD}-day")
     print(f"Volatility Lookback: {VOL_LOOKBACK} days")
     print(f"Backtest Period: ~{BACKTEST_YEARS} years")
-    print(f"Leverage: ASYMMETRIC (Q1=150%, Q2/Q3/Q4=100%)")
+    print(f"Leverage: UNIFORM (All Quads=150%)")
     print(f"Entry Confirmation: 1-day lag using live EMA")
     print("=" * 70)
     print()
@@ -761,6 +770,6 @@ if __name__ == "__main__":
     print("  - Quad signals: T-1 lag (prevent forward-looking bias)")
     print("  - Entry confirmation: T+0 (live EMA filter)")
     print("  - Volatility chasing: 30-day lookback")
-    print("  - Asymmetric leverage: Q1=1.5x, Others=1x")
+    print("  - Uniform leverage: All quads=1.5x")
     print("=" * 70)
 

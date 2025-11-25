@@ -39,7 +39,7 @@ class StrategyInitializer:
         self.backtest = QuadrantPortfolioBacktest(
             start_date='2020-01-01',
             end_date=end_date,
-            momentum_days=50,
+            momentum_days=20,
             ema_period=50,
             vol_lookback=30,
             max_positions=10,

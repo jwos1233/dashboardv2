@@ -1,0 +1,60 @@
+======================================================================
+EXECUTION LOG - 2025-11-20 14:35:41
+======================================================================
+
+Account Value: $52,806.31
+Mode: LIVE TRADING
+
+CONFIRMATION RESULTS:
+----------------------------------------------------------------------
+Confirmed: 10
+Rejected: 0
+
+Confirmed entries:
+  XLU: 27.34%
+  XLV: 25.29%
+  REMX: 16.80%
+  XOP: 8.63%
+  FCG: 7.85%
+  IEF: 7.73%
+  GLD: 7.18%
+  CPER: 6.94%
+  XLE: 6.09%
+  DBC: 4.40%
+
+======================================================================
+TRADES EXECUTED:
+======================================================================
+1. COPX
+2. Trade(contract=CFD(conId=481700644, symbol='REMX', exchange='SMART', currency='USD', localSymbol='REMX', tradingClass='REMX'), order=MarketOrder(orderId=310, clientId=1, permId=1980704503, action='BUY', totalQuantity=8.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=310, status='Filled', filled=8.0, remaining=0.0, avgFillPrice=75.16, permId=1980704503, parentId=0, lastFillPrice=75.16, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[Fill(contract=CFD(conId=481700644, symbol='REMX', exchange='SMART', currency='USD', localSymbol='REMX', tradingClass='REMX'), execution=Execution(execId='0000dc70.691ed42c.01.01', time=datetime.datetime(2025, 11, 20, 14, 34, 42, tzinfo=datetime.timezone.utc), acctNumber='U5343475', exchange='SMART', side='BOT', shares=8.0, price=75.16, permId=1980704503, clientId=1, orderId=310, liquidation=0, cumQty=8.0, avgPrice=75.16, orderRef='', evRule='', evMultiplier=0.0, modelCode='', lastLiquidity=1), commissionReport=CommissionReport(execId='0000dc70.691ed42c.01.01', commission=1.0, currency='USD', realizedPNL=0.0, yield_=0.0, yieldRedemptionDate=0), time=datetime.datetime(2025, 11, 20, 14, 34, 42, 571192, tzinfo=datetime.timezone.utc))], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 42, 234157, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 42, 561155, tzinfo=datetime.timezone.utc), status='Submitted', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 42, 571192, tzinfo=datetime.timezone.utc), status='Submitted', message='Fill 8.0@75.16', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 42, 572677, tzinfo=datetime.timezone.utc), status='Filled', message='', errorCode=0)], advancedError='')
+3. Trade(contract=CFD(conId=134771590, symbol='XOP', exchange='SMART', currency='USD', localSymbol='XOP', tradingClass='XOP'), order=MarketOrder(orderId=313, clientId=1, permId=1980704504, action='BUY', totalQuantity=2.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=313, status='Filled', filled=2.0, remaining=0.0, avgFillPrice=132.82, permId=1980704504, parentId=0, lastFillPrice=132.82, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[Fill(contract=CFD(conId=134771590, symbol='XOP', exchange='SMART', currency='USD', localSymbol='XOP', tradingClass='XOP'), execution=Execution(execId='0000dc70.691ed42d.01.01', time=datetime.datetime(2025, 11, 20, 14, 34, 47, tzinfo=datetime.timezone.utc), acctNumber='U5343475', exchange='SMART', side='BOT', shares=2.0, price=132.82, permId=1980704504, clientId=1, orderId=313, liquidation=0, cumQty=2.0, avgPrice=132.82, orderRef='', evRule='', evMultiplier=0.0, modelCode='', lastLiquidity=1), commissionReport=CommissionReport(execId='0000dc70.691ed42d.01.01', commission=1.0, currency='USD', realizedPNL=0.0, yield_=0.0, yieldRedemptionDate=0), time=datetime.datetime(2025, 11, 20, 14, 34, 47, 279842, tzinfo=datetime.timezone.utc))], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 46, 39766, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 47, 249721, tzinfo=datetime.timezone.utc), status='Submitted', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 47, 279842, tzinfo=datetime.timezone.utc), status='Submitted', message='Fill 2.0@132.82', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 47, 280642, tzinfo=datetime.timezone.utc), status='Filled', message='', errorCode=0)], advancedError='')
+4. Trade(contract=CFD(conId=558456093, symbol='FCG', exchange='SMART', currency='USD', localSymbol='FCG', tradingClass='FCG'), order=MarketOrder(orderId=316, clientId=1, permId=1980704505, action='BUY', totalQuantity=13.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=316, status='Filled', filled=13.0, remaining=0.0, avgFillPrice=24.125, permId=1980704505, parentId=0, lastFillPrice=24.125, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[Fill(contract=CFD(conId=558456093, symbol='FCG', exchange='SMART', currency='USD', localSymbol='FCG', tradingClass='FCG'), execution=Execution(execId='000220dd.691f270b.01.01', time=datetime.datetime(2025, 11, 20, 14, 34, 51, tzinfo=datetime.timezone.utc), acctNumber='U5343475', exchange='SMART', side='BOT', shares=13.0, price=24.125, permId=1980704505, clientId=1, orderId=316, liquidation=0, cumQty=13.0, avgPrice=24.125, orderRef='', evRule='', evMultiplier=0.0, modelCode='', lastLiquidity=1), commissionReport=CommissionReport(execId='000220dd.691f270b.01.01', commission=1.0, currency='USD', realizedPNL=0.0, yield_=0.0, yieldRedemptionDate=0), time=datetime.datetime(2025, 11, 20, 14, 34, 51, 94976, tzinfo=datetime.timezone.utc))], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 49, 907413, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 51, 91503, tzinfo=datetime.timezone.utc), status='Submitted', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 51, 94976, tzinfo=datetime.timezone.utc), status='Submitted', message='Fill 13.0@24.125', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 51, 95690, tzinfo=datetime.timezone.utc), status='Filled', message='', errorCode=0)], advancedError='')
+5. Trade(contract=CFD(conId=134771924, symbol='GLD', exchange='SMART', currency='USD', localSymbol='GLD', tradingClass='GLD'), order=MarketOrder(orderId=321, clientId=1, permId=1980704506, action='SELL', totalQuantity=3.0, lmtPrice=0.0, auxPrice=0.0), orderStatus=OrderStatus(orderId=321, status='Filled', filled=3.0, remaining=0.0, avgFillPrice=375.02, permId=1980704506, parentId=0, lastFillPrice=375.02, clientId=1, whyHeld='', mktCapPrice=0.0), fills=[Fill(contract=CFD(conId=134771924, symbol='GLD', exchange='SMART', currency='USD', localSymbol='GLD', tradingClass='GLD'), execution=Execution(execId='0000dc70.691ed42e.01.01', time=datetime.datetime(2025, 11, 20, 14, 34, 57, tzinfo=datetime.timezone.utc), acctNumber='U5343475', exchange='SMART', side='SLD', shares=3.0, price=375.02, permId=1980704506, clientId=1, orderId=321, liquidation=0, cumQty=3.0, avgPrice=375.02, orderRef='', evRule='', evMultiplier=0.0, modelCode='', lastLiquidity=1), commissionReport=CommissionReport(execId='0000dc70.691ed42e.01.01', commission=1.0, currency='USD', realizedPNL=19.044269, yield_=0.0, yieldRedemptionDate=0), time=datetime.datetime(2025, 11, 20, 14, 34, 57, 641869, tzinfo=datetime.timezone.utc))], log=[TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 57, 421810, tzinfo=datetime.timezone.utc), status='PendingSubmit', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 57, 630779, tzinfo=datetime.timezone.utc), status='Submitted', message='', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 57, 641869, tzinfo=datetime.timezone.utc), status='Submitted', message='Fill 3.0@375.02', errorCode=0), TradeLogEntry(time=datetime.datetime(2025, 11, 20, 14, 34, 57, 643418, tzinfo=datetime.timezone.utc), status='Filled', message='', errorCode=0)], advancedError='')
+
+======================================================================
+POSITIONS:
+======================================================================
+
+Before:
+  COPX: 93
+  FCG: 159
+  GLD: 13
+  IEF: 44
+  REMX: 110
+  XLE: 33
+  XLU: 156
+  XLV: 91
+  XOP: 32
+
+After:
+  DBC: 101
+  FCG: 172
+  GLD: 10
+  IEF: 44
+  REMX: 118
+  XLE: 36
+  XLU: 156
+  XLV: 91
+  XOP: 34
+
+======================================================================

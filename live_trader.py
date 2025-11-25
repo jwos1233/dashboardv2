@@ -21,7 +21,7 @@ class LiveTrader:
             dry_run: If True, generate signals but don't execute trades
             enable_telegram: If True, send Telegram notifications
         """
-        self.signal_gen = SignalGenerator(momentum_days=50, ema_period=50, vol_lookback=30, 
+        self.signal_gen = SignalGenerator(momentum_days=20, ema_period=50, vol_lookback=30, 
                                           max_positions=10, atr_stop_loss=2.0, atr_period=14)
         self.pending_manager = PendingOrdersManager()
         self.ib_port = ib_port

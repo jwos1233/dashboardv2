@@ -303,3 +303,5 @@ Get-Content execution_log_*.txt -Tail 50
 **Done!** Your trader will now run automatically Mon-Fri at 2:35 PM. 🎉
 
 
+
+
