@@ -8,12 +8,57 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from functools import lru_cache
 import warnings
+import yfinance as yf
+import uuid
+
 warnings.filterwarnings('ignore')
 
 from signal_generator import SignalGenerator
 from config import QUAD_ALLOCATIONS, QUADRANT_DESCRIPTIONS, QUAD_INDICATORS
 from quad_portfolio_backtest import QuadrantPortfolioBacktest
+
+# Known asset names (fallback to Yahoo Finance lookup otherwise)
+ASSET_NAME_OVERRIDES = {
+    'QQQ': 'Invesco QQQ Trust',
+    'ARKK': 'ARK Innovation ETF',
+    'IWM': 'iShares Russell 2000 ETF',
+    'XLC': 'Communication Services Select Sector SPDR',
+    'XLY': 'Consumer Discretionary Select Sector SPDR',
+    'TLT': 'iShares 20+ Year Treasury Bond ETF',
+    'LQD': 'iShares iBoxx $ Investment Grade Corporate',
+    'XLE': 'Energy Select Sector SPDR',
+    'DBC': 'Invesco DB Commodity Index Tracking',
+    'GCC': 'WisdomTree Enhanced Commodity Strategy',
+    'LIT': 'Global X Lithium & Battery Tech ETF',
+    'AA': 'Alcoa Corporation',
+    'PALL': 'Aberdeen Physical Palladium Shares',
+    'VALT': 'ETF Managers Group Short-Term Treasury',
+    'XLF': 'Financial Select Sector SPDR',
+    'XLI': 'Industrial Select Sector SPDR',
+    'XLB': 'Materials Select Sector SPDR',
+    'XOP': 'SPDR S&P Oil & Gas Exploration & Production',
+    'FCG': 'First Trust Natural Gas ETF',
+    'USO': 'United States Oil Fund',
+    'VNQ': 'Vanguard Real Estate ETF',
+    'PAVE': 'Global X U.S. Infrastructure Development',
+    'VTV': 'Vanguard Value ETF',
+    'IWD': 'iShares Russell 1000 Value ETF',
+    'GLD': 'SPDR Gold Shares',
+    'DBA': 'Invesco DB Agriculture Fund',
+    'REMX': 'VanEck Rare Earth/Strategic Metals ETF',
+    'URA': 'Global X Uranium ETF',
+    'TIP': 'iShares TIPS Bond ETF',
+    'VTIP': 'Vanguard Short-Term Inflation-Protected Sec',
+    'XLV': 'Health Care Select Sector SPDR',
+    'XLU': 'Utilities Select Sector SPDR',
+    'VGLT': 'Vanguard Long-Term Treasury ETF',
+    'IEF': 'iShares 7-10 Year Treasury Bond ETF',
+    'MUB': 'iShares National Muni Bond ETF',
+    'XLP': 'Consumer Staples Select Sector SPDR',
+    'QID': 'ProShares UltraShort QQQ'
+}
 
 # Page config
 st.set_page_config(
@@ -44,8 +89,38 @@ st.markdown("""
     .quad-q2 { border-color: #e74c3c; }
     .quad-q3 { border-color: #f39c12; }
     .quad-q4 { border-color: #3498db; }
+    .risk-box {
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        color: #fff;
+        text-align: center;
+        margin: 0.5rem 0;
+        font-weight: bold;
+    }
+    .risk-on { background-color: #27ae60; }
+    .risk-off { background-color: #c0392b; }
+    .risk-neutral { background-color: #7f8c8d; }
 </style>
 """, unsafe_allow_html=True)
+
+
+@lru_cache(maxsize=256)
+def get_asset_name(ticker: str) -> str:
+    """Return a human-readable asset name for a ticker."""
+    ticker = ticker.upper()
+    if ticker in ASSET_NAME_OVERRIDES:
+        return ASSET_NAME_OVERRIDES[ticker]
+    
+    try:
+        info = yf.Ticker(ticker).info
+        for field in ('longName', 'shortName', 'name'):
+            value = info.get(field)
+            if value:
+                return value
+    except Exception:
+        pass
+    
+    return ticker
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_quadrant_history(days=180):
@@ -168,25 +243,37 @@ def main():
                 delta=f"{'ACTIVE' if is_active else 'Inactive'}"
             )
     
-    # Show descriptions
+    # Show active quadrants + risk regime
     st.markdown("---")
-    col1, col2 = st.columns(2)
-    
+    col1, col2 = st.columns([2, 1])
+
     with col1:
         st.markdown(f"""
-        <div class="quadrant-box quad-{top1.lower()}">
-            <h3>🥇 Top 1: {top1}</h3>
-            <p><strong>{QUADRANT_DESCRIPTIONS[top1]}</strong></p>
-            <p>Score: {quad_scores.get(top1, 0):.2f}%</p>
+        <div class="quadrant-box">
+            <p><strong>Primary ({top1})</strong> — {QUADRANT_DESCRIPTIONS[top1]}</p>
+            <hr style="margin: 0.75rem 0;">
+            <p><strong>Secondary ({top2})</strong> — {QUADRANT_DESCRIPTIONS[top2]}</p>
         </div>
         """, unsafe_allow_html=True)
     
+    risk_status = "Neutral"
+    risk_reason = "No clear risk-on/off signal"
+    risk_class = "risk-neutral"
+    top_quads_set = {top1, top2}
+    if 'Q1' in top_quads_set:
+        risk_status = "Risk On"
+        risk_reason = "Q1 present in top regimes → favor growth assets"
+        risk_class = "risk-on"
+    elif 'Q4' in top_quads_set:
+        risk_status = "Risk Off"
+        risk_reason = "Q4 present in top regimes → defensive posture"
+        risk_class = "risk-off"
+    
     with col2:
         st.markdown(f"""
-        <div class="quadrant-box quad-{top2.lower()}">
-            <h3>🥈 Top 2: {top2}</h3>
-            <p><strong>{QUADRANT_DESCRIPTIONS[top2]}</strong></p>
-            <p>Score: {quad_scores.get(top2, 0):.2f}%</p>
+        <div class="risk-box {risk_class}">
+            <h3>{risk_status}</h3>
+            <p>{risk_reason}</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -245,6 +332,56 @@ def main():
                 
                 st.plotly_chart(fig, use_container_width=True)
                 
+                # New: Strategy backtest section
+                @st.cache_data(ttl=600)
+                def run_dashboard_backtest():
+                    years = 3
+                    end = datetime.now()
+                    start = end - timedelta(days=365 * years + 100)
+                    bt = QuadrantPortfolioBacktest(
+                        start_date=start,
+                        end_date=end,
+                        initial_capital=50000,
+                        momentum_days=20,
+                        ema_period=50,
+                        vol_lookback=30,
+                        max_positions=10,
+                        atr_stop_loss=2.0,
+                        atr_period=14
+                    )
+                    res = bt.run_backtest()
+                    return bt, res
+                
+                st.subheader("📈 Strategy Backtest (3-Year)")
+                try:
+                    backtest, results = run_dashboard_backtest()
+                    
+                    col_a, col_b, col_c, col_d = st.columns(4)
+                    col_a.metric("Total Return", f"{results['total_return']:.2f}%")
+                    col_b.metric("Annualized Return", f"{results['annual_return']:.2f}%")
+                    col_c.metric("Sharpe Ratio", f"{results['sharpe']:.2f}")
+                    col_d.metric("Max Drawdown", f"{results['max_drawdown']:.2f}%")
+                    
+                    equity_fig = go.Figure(
+                        data=[go.Scatter(
+                            x=backtest.portfolio_value.index,
+                            y=backtest.portfolio_value,
+                            mode='lines',
+                            line=dict(color='#8e44ad', width=2),
+                            name='Portfolio Value'
+                        )]
+                    )
+                    equity_fig.update_layout(
+                        title="Backtest Portfolio Value",
+                        yaxis_title="Equity ($)",
+                        xaxis_title="Date",
+                        height=450,
+                        hovermode='x unified'
+                    )
+                    st.plotly_chart(equity_fig, use_container_width=True)
+                except Exception as e:
+                    st.error(f"Backtest failed: {e}")
+                
                 # Show recent scores table
                 with st.expander("📊 Recent Scores Table (Last 30 Days)"):
                     display_cols = ['Q1_Score', 'Q2_Score', 'Q3_Score', 'Q4_Score', 'Top1', 'Top2']
@@ -287,10 +424,9 @@ def main():
             is_in_active = any(q in [top1, top2] for q in quads)
             
             portfolio_data.append({
-                'Ticker': ticker,
-                'Weight (%)': weight * 100,
+                'Asset': get_asset_name(ticker),
                 'Quadrant(s)': quad_str,
-                'Active': '✅' if is_in_active else '❌'
+                'Weight (%)': weight * 100
             })
         
         portfolio_df = pd.DataFrame(portfolio_data)
@@ -303,13 +439,12 @@ def main():
         with col2:
             st.metric("Number of Positions", len(target_weights))
         with col3:
-            active_count = sum(1 for _, row in portfolio_df.iterrows() if row['Active'] == '✅')
-            st.metric("Active Positions", active_count)
+            st.metric("Active Quadrants", f"{top1} + {top2}")
         
         # Display portfolio table
         st.subheader("Position Details")
         st.dataframe(
-            portfolio_df.style.format({'Weight (%)': '{:.2f}'}),
+            portfolio_df[['Asset', 'Quadrant(s)', 'Weight (%)']].style.format({'Weight (%)': '{:.2f}'}),
             use_container_width=True,
             hide_index=True
         )
@@ -317,7 +452,7 @@ def main():
         # Portfolio allocation chart
         st.subheader("Portfolio Allocation Chart")
         fig_pie = go.Figure(data=[go.Pie(
-            labels=portfolio_df['Ticker'],
+            labels=portfolio_df['Asset'],
             values=portfolio_df['Weight (%)'],
             hole=0.3,
             textinfo='label+percent',

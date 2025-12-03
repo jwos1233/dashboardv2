@@ -282,6 +282,28 @@ class SimpleLiveTrader:
                 # Get positions after
                 positions_after = ib_exec.get_current_positions()
                 
+                # ENFORCE TOP 10: Close any positions not in confirmed_weights
+                positions_to_close = [ticker for ticker in positions_after.keys() 
+                                     if ticker not in confirmed_weights]
+                if positions_to_close:
+                    print(f"\n⚠️ Found {len(positions_to_close)} positions not in top 10 - closing...")
+                    for ticker in positions_to_close:
+                        try:
+                            contract = ib_exec.create_cfd_contract(ticker)
+                            if contract:
+                                quantity = int(abs(positions_after[ticker]))
+                                if quantity > 0:
+                                    action = 'SELL' if positions_after[ticker] > 0 else 'BUY'
+                                    print(f"  Closing {ticker} ({quantity} shares)...")
+                                    trade = ib_exec.place_order(contract, quantity, action)
+                                    if trade:
+                                        print(f"    ✓ Closed {ticker}")
+                        except Exception as e:
+                            print(f"    ✗ Error closing {ticker}: {e}")
+                    
+                    # Re-fetch positions after cleanup
+                    positions_after = ib_exec.get_current_positions()
+                
                 # Display summary
                 print("\n" + "="*70)
                 print("EXECUTION COMPLETE")
@@ -290,6 +312,8 @@ class SimpleLiveTrader:
                 print(f"Rejected entries: {len(rejected)}")
                 print(f"Trades executed: {len(trades) if trades else 0}")
                 print(f"Final positions: {len(positions_after)}")
+                if len(positions_after) > len(confirmed_weights):
+                    print(f"⚠️ WARNING: {len(positions_after)} positions but only {len(confirmed_weights)} confirmed!")
                 print("="*70)
                 
                 # Send Telegram notification

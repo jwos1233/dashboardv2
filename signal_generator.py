@@ -188,6 +188,12 @@ class SignalGenerator:
             
             final_weights = {t: w * scale_factor for t, w in top_n_weights.items()}
         
+        # ENFORCE: Never return more than max_positions
+        if self.max_positions and len(final_weights) > self.max_positions:
+            sorted_weights = sorted(final_weights.items(), key=lambda x: x[1], reverse=True)
+            final_weights = dict(sorted_weights[:self.max_positions])
+            print(f"⚠️ WARNING: Had to force-filter to {self.max_positions} positions!")
+        
         return final_weights
     
     def generate_signals(self) -> Dict:
