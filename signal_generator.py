@@ -17,7 +17,7 @@ import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
 from typing import Dict, Tuple
-from config import QUAD_ALLOCATIONS
+from config import QUAD_ALLOCATIONS, REGIME_POSITION_SIZES
 
 # Quadrant indicators for momentum scoring
 QUAD_INDICATORS = {
@@ -40,13 +40,8 @@ class SignalGenerator:
         self.atr_stop_loss = atr_stop_loss  # ATR 2.0x stop loss (optimal from backtesting)
         self.atr_period = atr_period  # 14-day ATR
         
-        # Leverage by quadrant
-        self.quad_leverage = {
-            'Q1': 1.5,  # Goldilocks - overweight
-            'Q2': 1.0,  # Reflation
-            'Q3': 1.0,  # Stagflation
-            'Q4': 1.0   # Deflation
-        }
+        # Leverage by quadrant - use config values
+        self.quad_leverage = REGIME_POSITION_SIZES.copy()
     
     def fetch_market_data(self, lookback_days=150):
         """
@@ -138,8 +133,12 @@ class SignalGenerator:
         final_weights = {}
         
         for quad in [top1, top2]:
-            # Get leverage for this quad
-            quad_leverage = self.quad_leverage[quad]
+            # Get leverage for this quad (use config value, default to 0 if not found)
+            quad_leverage = self.quad_leverage.get(quad, 0.0)
+            
+            # Skip if no leverage allocated to this quadrant
+            if quad_leverage <= 0:
+                continue
             
             # Get tickers in this quad
             quad_tickers = [t for t in QUAD_ALLOCATIONS[quad].keys() 

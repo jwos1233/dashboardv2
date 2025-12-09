@@ -10,7 +10,7 @@ Key Features:
 - 30-day volatility lookback (optimal for responsiveness vs stability)
 - 50-day EMA trend filter (only allocate to assets above EMA)
 - Event-driven rebalancing (quad change or EMA crossover)
-- UNIFORM leverage: All quads get 150% (1.5x) exposure
+- Regime-based leverage: Uses REGIME_POSITION_SIZES from config (Q1=33.3%, Q2=16.7%, Q3=16.7%, Q4=0%)
 - ENTRY CONFIRMATION: 1-day lag using CURRENT/TODAY's EMA (not lagged)
 - 5% MINIMUM DELTA: Only rebalance if position changes > 5%
 - REALISTIC EXECUTION: Trade at next day's open (accounts for gap risk)
@@ -38,11 +38,10 @@ import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from config import QUAD_ALLOCATIONS, QUADRANT_DESCRIPTIONS
+from config import QUAD_ALLOCATIONS, QUADRANT_DESCRIPTIONS, REGIME_POSITION_SIZES, MAX_POSITIONS
 
-# Backtest leverage controls
-BASE_QUAD_LEVERAGE = 1.5       # 1.5x exposure for all quads
-Q1_LEVERAGE_MULTIPLIER = 1.0   # Q1 gets same as base (1.5x) - no extra boost
+# Backtest leverage controls - now using config values
+# REGIME_POSITION_SIZES imported from config (Q1=0.333, Q2=0.167, Q3=0.167, Q4=0.0)
 
 # Manual overrides for assets that must be fetched even if not in current
 # allocation map (keeps backtests aligned with latest production universe).
@@ -58,7 +57,7 @@ class QuadrantPortfolioBacktest:
         self.momentum_days = momentum_days
         self.ema_period = ema_period
         self.vol_lookback = vol_lookback
-        self.max_positions = max_positions  # If set, only trade top N positions
+        self.max_positions = max_positions if max_positions is not None else MAX_POSITIONS  # Use config default if not specified
         self.atr_stop_loss = atr_stop_loss  # ATR multiplier for stop loss (None = no stops)
         self.atr_period = atr_period  # ATR lookback period (default 14)
         
@@ -193,11 +192,9 @@ class QuadrantPortfolioBacktest:
             # Process each quad separately with volatility weighting
             final_weights = {}
             
-            # UNIFORM LEVERAGE: 1.5x base exposure for all quads
+            # Use REGIME_POSITION_SIZES from config (Q1=0.333, Q2=0.167, Q3=0.167, Q4=0.0)
             for quad in (top1, top2):
-                quad_weight = BASE_QUAD_LEVERAGE
-                if quad == 'Q1':
-                    quad_weight *= Q1_LEVERAGE_MULTIPLIER
+                quad_weight = REGIME_POSITION_SIZES.get(quad, 0.0)  # Get from config, default to 0 if not found
                     
                 # Get tickers for this quad
                 quad_tickers = [t for t in QUAD_ALLOCATIONS[quad].keys() 
@@ -548,6 +545,21 @@ class QuadrantPortfolioBacktest:
         self.entry_prices = entry_prices  # Current open positions entry prices
         self.entry_dates = entry_dates    # Current open positions entry dates
         self.entry_atrs = entry_atrs      # Current open positions entry ATRs
+        self.actual_positions = actual_positions  # Store final positions
+        self.final_date = target_weights.index[-1]  # Store final date
+        
+        # Store final top quads (use the last available date in quad_history)
+        if hasattr(self, 'quad_history') and len(self.quad_history) > 0:
+            final_quad_date = self.quad_history.index[-1]
+            self.final_top_quads = {
+                'date': final_quad_date,
+                'top1': self.quad_history.loc[final_quad_date, 'Top1'],
+                'top2': self.quad_history.loc[final_quad_date, 'Top2'],
+                'score1': self.quad_history.loc[final_quad_date, 'Score1'],
+                'score2': self.quad_history.loc[final_quad_date, 'Score2']
+            }
+        else:
+            self.final_top_quads = None
         
         print(f"  Total rebalances: {rebalance_count} (out of {len(target_weights)-1} days)")
         print(f"  Entries confirmed: {entries_confirmed}")
@@ -588,6 +600,87 @@ class QuadrantPortfolioBacktest:
             'max_drawdown': max_drawdown,
             'final_value': self.portfolio_value.iloc[-1]
         }
+    
+    def print_current_positions_and_quads(self):
+        """Print current positions, allocations, and active quadrants"""
+        print("\n" + "=" * 70)
+        print("CURRENT POSITIONS & ACTIVE QUADRANTS")
+        print("=" * 70)
+        
+        # Get final date and top quads
+        if hasattr(self, 'final_top_quads') and self.final_top_quads is not None:
+            final_date = self.final_top_quads['date']
+            top1 = self.final_top_quads['top1']
+            top2 = self.final_top_quads['top2']
+            score1 = self.final_top_quads['score1']
+            score2 = self.final_top_quads['score2']
+            
+            print(f"\nDate: {final_date.strftime('%Y-%m-%d')}")
+            print(f"\nActive Quadrants:")
+            print(f"  Top 1: {top1} ({QUADRANT_DESCRIPTIONS[top1]}) - Score: {score1*100:.2f}%")
+            print(f"  Top 2: {top2} ({QUADRANT_DESCRIPTIONS[top2]}) - Score: {score2*100:.2f}%")
+            
+            # Get leverage for active quads
+            q1_leverage = REGIME_POSITION_SIZES.get(top1, 0.0) * 100
+            q2_leverage = REGIME_POSITION_SIZES.get(top2, 0.0) * 100
+            total_leverage = q1_leverage + q2_leverage
+            print(f"\nQuadrant Leverage:")
+            print(f"  {top1}: {q1_leverage:.1f}%")
+            print(f"  {top2}: {q2_leverage:.1f}%")
+            print(f"  Total: {total_leverage:.1f}%")
+        elif hasattr(self, 'final_date'):
+            print(f"\nDate: {self.final_date.strftime('%Y-%m-%d')}")
+            print("  (Quadrant data not available)")
+        else:
+            print("\n  (Backtest data not available)")
+        
+        # Get current positions
+        if hasattr(self, 'actual_positions'):
+            current_positions = self.actual_positions[self.actual_positions > 0.001]  # Filter out tiny positions
+            
+            if len(current_positions) == 0:
+                print("\nCurrent Positions: None (100% Cash)")
+            else:
+                # Get final portfolio value
+                final_value = self.portfolio_value.iloc[-1] if hasattr(self, 'portfolio_value') else self.initial_capital
+                
+                # Build ticker to quad mapping
+                ticker_to_quads = {}
+                for quad, allocations in QUAD_ALLOCATIONS.items():
+                    for ticker in allocations.keys():
+                        if ticker not in ticker_to_quads:
+                            ticker_to_quads[ticker] = []
+                        ticker_to_quads[ticker].append(quad)
+                
+                # Sort by weight
+                sorted_positions = current_positions.sort_values(ascending=False)
+                
+                print(f"\nCurrent Positions ({len(sorted_positions)}):")
+                print(f"{'Ticker':<10} {'Allocation %':<15} {'Allocation $':<15} {'Quadrant(s)':<20}")
+                print("-" * 70)
+                
+                total_allocated = 0
+                for ticker, weight in sorted_positions.items():
+                    allocation_pct = weight * 100
+                    allocation_dollar = weight * final_value
+                    total_allocated += weight
+                    
+                    # Get quadrants for this ticker
+                    quads = ticker_to_quads.get(ticker, [])
+                    quad_str = ", ".join(quads) if quads else "N/A"
+                    
+                    print(f"{ticker:<10} {allocation_pct:>13.2f}%  ${allocation_dollar:>13,.2f}  {quad_str:<20}")
+                
+                print("-" * 70)
+                cash_pct = (1.0 - total_allocated) * 100
+                cash_dollar = (1.0 - total_allocated) * final_value
+                print(f"{'CASH':<10} {cash_pct:>13.2f}%  ${cash_dollar:>13,.2f}  {'N/A':<20}")
+                print("-" * 70)
+                print(f"{'TOTAL':<10} {'100.00%':>15}  ${final_value:>13,.2f}")
+        else:
+            print("\nCurrent Positions: (Data not available)")
+        
+        print("=" * 70)
     
     def print_annual_breakdown(self):
         """Print annual performance breakdown"""
@@ -725,7 +818,7 @@ if __name__ == "__main__":
     print(f"EMA Trend Filter: {EMA_PERIOD}-day")
     print(f"Volatility Lookback: {VOL_LOOKBACK} days")
     print(f"Backtest Period: ~{BACKTEST_YEARS} years")
-    print(f"Leverage: UNIFORM (All Quads=150%)")
+    print(f"Leverage: Regime-based from config (Q1={REGIME_POSITION_SIZES['Q1']*100:.1f}%, Q2={REGIME_POSITION_SIZES['Q2']*100:.1f}%, Q3={REGIME_POSITION_SIZES['Q3']*100:.1f}%, Q4={REGIME_POSITION_SIZES['Q4']*100:.1f}%)")
     print(f"Entry Confirmation: 1-day lag using live EMA")
     print("=" * 70)
     print()
@@ -760,6 +853,9 @@ if __name__ == "__main__":
     # SPY comparison
     backtest.print_spy_comparison()
     
+    # Show current positions and active quadrants
+    backtest.print_current_positions_and_quads()
+    
     backtest.plot_results()
     
     print("\n" + "=" * 70)
@@ -770,6 +866,6 @@ if __name__ == "__main__":
     print("  - Quad signals: T-1 lag (prevent forward-looking bias)")
     print("  - Entry confirmation: T+0 (live EMA filter)")
     print("  - Volatility chasing: 30-day lookback")
-    print("  - Uniform leverage: All quads=1.5x")
+    print(f"  - Regime-based leverage: Q1={REGIME_POSITION_SIZES['Q1']*100:.1f}%, Q2={REGIME_POSITION_SIZES['Q2']*100:.1f}%, Q3={REGIME_POSITION_SIZES['Q3']*100:.1f}%, Q4={REGIME_POSITION_SIZES['Q4']*100:.1f}%")
     print("=" * 70)
 

@@ -48,6 +48,9 @@ print(f"Final Value:       ${results['final_value']:,.2f}")
 
 print("="*70)
 
+# Show current positions and active quadrants
+backtest.print_current_positions_and_quads()
+
 # Show comparison to buy & hold SPY
 backtest.print_spy_comparison()
 
