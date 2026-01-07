@@ -149,102 +149,82 @@ LOG_LEVEL = "INFO"
 LOG_FILE = "macro_quadrant_strategy.log"
 
 # === QUADRANT ALLOCATIONS (FOR DASHBOARD) ===
-# Portfolio Allocations per Quadrant - Crypto Asset Deployment Framework
+# Portfolio Allocations per Quadrant - Macro Asset Deployment Framework
 QUAD_ALLOCATIONS = {
     'Q1': {
-        # BTC Spot
-        'IBIT': 0.20,              # BTC Spot ETF
-        
-        # ETH Spot
-        'ETHA': 0.15,              # ETH Spot ETF
-        
-        # BTC Treasury Companies (4 assets)
-        'MSTR': 0.10,              # BTC Treasury Company
-        'CEP': 0.08,               # BTC Treasury Company
-        'CEPO': 0.07,              # BTC Treasury Company
-        'STRIVE': 0.05,            # BTC Treasury Company
-        
-        # ETH Treasury Companies (3 assets)
-        'SBET': 0.05,              # ETH Treasury Company
-        'BMNR': 0.05,              # ETH Treasury Company
-        'ETHZ': 0.05,              # ETH Treasury Company
-        
-        # Pure Play Miners (2 assets)
-        'MARA': 0.06,              # Pure Play Miner
-        'CIFR': 0.04,              # Pure Play Miner
-        
-        # Diversified Miners (7 assets)
-        'IREN': 0.03,              # Diversified Miner
-        'CORZ': 0.03,              # Diversified Miner
-        'HUT': 0.02,               # Diversified Miner
-        'BTDR': 0.02,              # Diversified Miner
-        'BTBT': 0.02,              # Diversified Miner
-        'WULF': 0.02,              # Diversified Miner
-        'HIVE': 0.02,              # Diversified Miner
-        
-        # Altcoin Digital Asset Treasuries (4 assets)
-        'ASST': 0.015,             # Altcoin Treasury
-        'UPXI': 0.015,             # Altcoin Treasury
-        'AVX': 0.01,               # Altcoin Treasury
-        'DFDV': 0.01,              # Altcoin Treasury
-        
-        # Infrastructure/Exchanges (6 assets)
-        'COIN': 0.03,              # Infrastructure/Exchange
-        'GLXY': 0.02,              # Infrastructure/Exchange
-        'CRCL': 0.02,              # Infrastructure/Exchange
-        'BLSH': 0.015,             # Infrastructure/Exchange
-        'CAN': 0.015,              # Infrastructure/Exchange
-        'SQ': 0.02,                # Infrastructure/Exchange
+        # Growth (60%)
+        'QQQ': 0.60 * 0.40,        # 40% of 60% Growth
+        'BTC-USD': 0.60 * 0.10,    # 10% of 60% Growth (Bitcoin)
+        'ARKK': 0.60 * 0.30,       # 30% of 60% Growth
+        'IWM': 0.60 * 0.15,        # 15% of 60% Growth (Small Caps)
+        # Consumer Discretionary (15%)
+        'XLC': 0.15 * 0.50,        # 50% of 15% Consumer Disc
+        'XLY': 0.15 * 0.50,        # 50% of 15% Consumer Disc
+        # Bonds (10%)
+        'TLT': 0.10 * 0.50,        # 50% of 10% Bonds
+        'LQD': 0.10 * 0.50,        # 50% of 10% Bonds
     },
     'Q2': {
-        # BTC Spot
-        'IBIT': 0.30,              # BTC Spot ETF
-        
-        # BTC Treasury Companies (4 assets)
-        'MSTR': 0.15,              # BTC Treasury Company
-        'CEP': 0.10,               # BTC Treasury Company
-        'CEPO': 0.08,              # BTC Treasury Company
-        'STRIVE': 0.07,            # BTC Treasury Company
-        
-        # Pure Play Miners (2 assets)
-        'MARA': 0.10,              # Pure Play Miner
-        'CIFR': 0.08,              # Pure Play Miner
-        
-        # Diversified Miners (7 assets)
-        'IREN': 0.04,              # Diversified Miner
-        'CORZ': 0.03,               # Diversified Miner
-        'HUT': 0.02,               # Diversified Miner
-        'BTDR': 0.015,             # Diversified Miner
-        'BTBT': 0.015,             # Diversified Miner
-        'WULF': 0.01,              # Diversified Miner
-        'HIVE': 0.01,              # Diversified Miner
-        
-        # Infrastructure/Exchanges (6 assets)
-        'COIN': 0.03,              # Infrastructure/Exchange
-        'GLXY': 0.02,              # Infrastructure/Exchange
-        'CRCL': 0.015,             # Infrastructure/Exchange
-        'BLSH': 0.01,              # Infrastructure/Exchange
-        'CAN': 0.01,               # Infrastructure/Exchange
-        'SQ': 0.015,               # Infrastructure/Exchange
+        # Commodities (35%)
+        'XLE': 0.35 * 0.20,        # 20% of 35% Commodities
+        'DBC': 0.35 * 0.20,        # 20% of 35% Commodities
+        'GCC': 0.35 * 0.20,        # 20% of 35% Commodities
+        'LIT': 0.35 * 0.10,        # 10% of 35% Commodities (Lithium)
+        'PALL': 0.35 * 0.10,       # 10% of 35% Commodities (Palladium)
+        # Cyclicals (30%)
+        'XLF': 0.30 * 0.333,       # 33% of 30% Cyclicals
+        'XLI': 0.30 * 0.333,       # 33% of 30% Cyclicals
+        'XLB': 0.30 * 0.334,       # 34% of 30% Cyclicals
+        # Energy (15%)
+        'XOP': 0.15 * 0.333,       # 33% of 15% Energy
+        'AA': 0.15 * 0.333,        # 33% of 15% Energy (Alcoa)
+        'FCG': 0.15 * 0.333,       # 33% of 15% Energy
+        'USO': 0.15 * 0.334,       # 34% of 15% Energy (Crude Oil)
+        # Real Assets (10%)
+        'VNQ': 0.10 * 0.50,        # 50% of 10% Real Assets
+        'PAVE': 0.10 * 0.50,       # 50% of 10% Real Assets
+        # Value (10%)
+        'VTV': 0.10 * 0.50,        # 50% of 10% Value
+        'IWD': 0.10 * 0.50,        # 50% of 10% Value
+        # Emerging Markets
+        'EEM': 0.25 * 0.333,       # 33% of 25% EM
     },
     'Q3': {
-        # BTC Spot
-        'IBIT': 0.50,              # BTC Spot ETF (Core defensive position)
-        
-        # Diversified Miners (7 assets) - Only low-cost, defensive miners
-        'IREN': 0.10,              # Diversified Miner
-        'CORZ': 0.08,              # Diversified Miner
-        'HUT': 0.07,               # Diversified Miner
-        'BTDR': 0.06,              # Diversified Miner
-        'BTBT': 0.05,              # Diversified Miner
-        'WULF': 0.04,              # Diversified Miner
-        'HIVE': 0.10,              # Diversified Miner
-        # Note: High cash allocation (remaining ~50%) - no ticker for cash
+        # Energy (25%)
+        'FCG': 0.25 * 0.333,       # 33% of 25% Energy
+        'EEM': 0.25 * 0.333,       # 33% of 25% Energy
+        'XLE': 0.25 * 0.333,       # 33% of 25% Energy
+        'XOP': 0.25 * 0.334,       # 34% of 25% Energy
+        # Commodities (30%)
+        'GLD': 0.30 * 0.12,        # 12% of 30% Commodities
+        'DBC': 0.30 * 0.12,        # 12% of 30% Commodities
+        'DBA': 0.30 * 0.12,        # 12% of 30% Commodities
+        'REMX': 0.30 * 0.12,       # 12% of 30% Commodities
+        'URA': 0.30 * 0.12,        # 12% of 30% Commodities (Uranium)
+        'LIT': 0.30 * 0.10,        # 10% of 30% Commodities (Lithium)
+        'PALL': 0.30 * 0.10,       # 10% of 30% Commodities (Palladium)
+        # TIPS (20%)
+        'TIP': 0.20 * 0.50,        # 50% of 20% TIPS
+        'VTIP': 0.20 * 0.50,       # 50% of 20% TIPS
+        # Real Assets (10%)
+        'VNQ': 0.10 * 0.50,        # 50% of 10% Real Assets
+        'PAVE': 0.10 * 0.50,       # 50% of 10% Real Assets
+        # Defensive Equities (15%)
+        'XLV': 0.15 * 0.333,       # 33% of 15% Equities
+        'XLU': 0.15 * 0.333,       # 33% of 15% Equities
     },
     'Q4': {
-        # FLAT - NO DEPLOYMENT
-        # 100% cash (or stablecoins if yield available)
-        # No assets allocated in deflationary liquidation regime
+        # Long Duration (50%)
+        'VGLT': 0.50 * 0.50,       # 50% of 50% Long Duration
+        'IEF': 0.50 * 0.50,        # 50% of 50% Long Duration
+        # IG Credit (20%)
+        'LQD': 0.20 * 0.50,        # 50% of 20% IG Credit
+        'MUB': 0.20 * 0.50,        # 50% of 20% IG Credit
+        # Defensive (15%)
+        'XLU': 0.15 * 0.25,        # 25% of 15% Defensive
+        'XLP': 0.15 * 0.25,        # 25% of 15% Defensive
+        'XLV': 0.15 * 0.25,        # 25% of 15% Defensive
+        # Cash allocation (15%) - no ticker
     }
 }
 
